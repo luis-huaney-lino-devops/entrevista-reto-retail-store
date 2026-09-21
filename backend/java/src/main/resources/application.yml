@@ -56,7 +56,19 @@ app:
     emisor: retail-store
     vigencia-acceso: PT15M
     vigencia-refresco-panel: PT12H
+    # 30 dias en la tienda frente a 12 horas en el panel: obligar a un comprador
+    # a entrar de nuevo cada manana cuesta ventas, y lo que su sesion puede
+    # hacer no se parece a lo que puede hacer la de un administrador.
+    vigencia-refresco-tienda: P30D
     cookie-segura: ${JWT_COOKIE_SEGURA:false}
+  google:
+    # Vacio a proposito: el repositorio no lleva credenciales. Sin esta variable
+    # POST /api/v1/cuenta/google responde 503 GOOGLE_NOT_CONFIGURED diciendo
+    # exactamente que falta, en lugar de fallar de una forma que parezca culpa
+    # del usuario.
+    client-id: ${GOOGLE_CLIENT_ID:}
+    url-jwks: ${GOOGLE_JWKS_URL:https://www.googleapis.com/oauth2/v3/certs}
+    vigencia-claves: PT1H
   almacen:
     # Dónde acaban las imágenes. 'local' escribe en disco y sirve desde la
     # propia API: vale para desarrollo y no necesita cuenta de Cloudflare.

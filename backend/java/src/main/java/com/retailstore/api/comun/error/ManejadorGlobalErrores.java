@@ -76,11 +76,22 @@ public class ManejadorGlobalErrores extends ResponseEntityExceptionHandler {
 
     // ------------------------------------------------------------------ dominio
 
+    /**
+     * Devuelve {@code ResponseEntity} y no el {@code ProblemDetail} a secas por
+     * un solo caso: el {@code 429} tiene que llevar {@code Retry-After}. Sin esa
+     * cabecera el cliente reintenta de inmediato y empeora justo lo que el
+     * límite intenta contener, y es lo que exige RN-068.
+     */
     @ExceptionHandler(ExcepcionAplicacion.class)
-    public ProblemDetail manejarAplicacion(ExcepcionAplicacion ex) {
+    public ResponseEntity<ProblemDetail> manejarAplicacion(ExcepcionAplicacion ex) {
         ProblemDetail problema = problema(ex.codigo(), ex.getMessage());
         ex.datos().forEach(problema::setProperty);
-        return problema;
+
+        HttpHeaders cabeceras = new HttpHeaders();
+        if (ex.datos().get("reintentarEn") instanceof Number segundos) {
+            cabeceras.set(HttpHeaders.RETRY_AFTER, String.valueOf(segundos.longValue()));
+        }
+        return new ResponseEntity<>(problema, cabeceras, ex.codigo().estado());
     }
 
     // ------------------------------------------------------------- seguridad

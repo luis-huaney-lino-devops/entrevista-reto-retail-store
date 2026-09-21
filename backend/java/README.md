@@ -96,7 +96,9 @@ En Docker van en `environment:` del servicio; ver `deploy/docker-compose.prod.ym
 | `PORT` | `8080` | Puerto de escucha |
 | `CORS_ALLOWED_ORIGINS` | `http://localhost:3000,http://localhost:5173` | Orígenes del panel y la tienda, separados por coma |
 | **`JWT_SECRETO`** | valor de desarrollo | Clave HMAC. **Mínimo 32 bytes.** Obligatorio en producción |
-| `JWT_COOKIE_SEGURA` | `false` | `true` en producción: marca `Secure` en la cookie de refresco |
+| `JWT_COOKIE_SEGURA` | `false` | `true` en producción: marca `Secure` en las cookies de refresco |
+| `GOOGLE_CLIENT_ID` | *(vacío)* | Client id de la consola de Google. Sin él, `POST /api/v1/cuenta/google` responde `503 GOOGLE_NOT_CONFIGURED` |
+| `GOOGLE_JWKS_URL` | JWKS de Google | Solo se cambia para apuntar a un doble en pruebas |
 | `ALMACEN_TIPO` | `local` | `local` (disco) o `r2` (Cloudflare) |
 | `ALMACEN_DIRECTORIO` | `./datos/archivos` | Raíz en disco cuando el tipo es `local` |
 | `ALMACEN_URL_PUBLICA` | `http://localhost:8080/archivos` | Prefijo de las URL de imagen |
@@ -107,6 +109,11 @@ En Docker van en `environment:` del servicio; ver `deploy/docker-compose.prod.ym
 > Con `ALMACEN_TIPO=r2` y credenciales incompletas, **la aplicación se niega a
 > arrancar**. Es deliberado: aceptar subidas que van a fallar una por una,
 > cuando alguien ya está usando el panel, es peor que no levantar.
+
+> `GOOGLE_CLIENT_ID` vacío **no** impide arrancar, y ahí la diferencia es real:
+> sin R2 no hay catálogo con fotos, pero sin Google la tienda funciona entera
+> salvo un botón. Lo que sí hace es responder `503` con el nombre de la
+> variable que falta, en vez de un error que parezca culpa del usuario.
 
 ---
 
@@ -125,12 +132,19 @@ src/main/java/com/retailstore/api/
 │
 ├── config/         reloj inyectable, CORS, OpenAPI
 │
-├── seguridad/      identidad del panel: JWT, refresco rotativo, administradores
+├── seguridad/      identidad del panel: JWT de las dos audiencias, refresco
+│                   rotativo, administradores
+├── cuenta/         identidad de la tienda: registro, acceso, Google,
+│                   direcciones y favoritos del cliente
+├── ubigeo/         departamento → provincia → distrito, solo de lectura
+├── cliente/        la ficha del cliente tal como la ve el panel
 ├── catalogo/       marcas, categorías, subcategorías y productos
 ├── archivo/        subida, conversión a WebP y almacenamiento
 ├── cupon/          descuentos
 ├── carrito/        carrito de la tienda
 ├── orden/          órdenes: consulta y máquina de estados
+├── chat/           atención al cliente por WebSocket, con adjuntos
+├── notificacion/   los avisos del panel
 └── panel/          las cifras del tablero
 ```
 

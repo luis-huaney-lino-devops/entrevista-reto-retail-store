@@ -67,7 +67,7 @@ interfaz web en `http://localhost:8025`.
 ```bash
 cd backend/java
 DB_PUERTO_HOST=5433 mvn spring-boot:run   # http://localhost:8080 · Swagger en /swagger
-mvn test                                   # 118 pruebas unitarias
+mvn test                                   # 158 pruebas unitarias
 mvn -Dtest=ProductoTest test
 mvn -Dtest=ProductoTest#calculaDescuento test
 ```
@@ -92,12 +92,13 @@ está construida.
 
 ### Pruebas de extremo a extremo
 
-Las dos necesitan la API levantada y son **idempotentes**: se pueden repetir
+Las tres necesitan la API levantada y son **idempotentes**: se pueden repetir
 sobre la misma base sin limpiarla.
 
 ```bash
-python pruebas/humo-api.py     # 124 comprobaciones: catálogo, panel, órdenes, tablero
+python pruebas/humo-api.py     # 127 comprobaciones: catálogo, panel, órdenes, tablero
 python pruebas/humo-chat.py    # 60: chat por WebSocket, adjuntos, notificaciones, papelera
+python pruebas/humo-cuenta.py  # 105: ubigeo, cuenta, Google, direcciones, favoritos
 ```
 
 Merecen la pena: han encontrado **seis** defectos que ninguna prueba unitaria
@@ -133,7 +134,8 @@ Controlador → DTO → Servicio → Repositorio → PostgreSQL
 ```
 
 Paquetes por funcionalidad, no por capa: `com.retailstore.api.{catalogo, carrito,
-chat, cliente, cupon, notificacion, orden, panel, seguridad, archivo, comun, config}`.
+chat, cliente, cuenta, cupon, notificacion, orden, panel, seguridad, ubigeo, archivo,
+comun, config}`.
 Cada módulo tiene dentro `dominio/`, `dto/`, `repositorio/`, `servicio/`, `web/`.
 
 La lógica que pertenece a una entidad vive en la entidad

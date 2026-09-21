@@ -17,9 +17,10 @@ import java.util.Locale;
  * <p>No comparte tabla con el administrador (ADR-0008): el registro público
  * escribe aquí, y esta tabla no da acceso al panel bajo ninguna circunstancia.
  *
- * <p>El registro, la verificación de correo y el acceso con Google llegan con
- * el bloque de identidad. Lo que existe hoy es lo que el panel necesita: saber
- * quién compró y poder hablar con esa persona.
+ * <p>Se puede entrar de dos formas y las dos conviven en la misma fila:
+ * contraseña propia ({@code hashContrasena}) e identidad externa (tabla
+ * {@code identidad_externa}). Quitar la última de las dos deja la cuenta
+ * inaccesible, y eso es lo que prohíbe RN-065.
  */
 // Filtra lo eliminado en toda consulta HQL o de criterios. NO se aplica a
 // find(id): ahí Hibernate va directo a la clave primaria.
@@ -71,6 +72,19 @@ public class Cliente extends EntidadEliminable {
         this.telefono = telefono;
     }
 
+    /**
+     * Cliente que nace de un acceso con Google.
+     *
+     * <p>Sin contraseña y con el correo ya verificado: Google lo verificó, y
+     * volver a pedirle al usuario que abra un enlace sería pedirle que
+     * demuestre dos veces lo mismo.
+     */
+    public static Cliente deProveedorExterno(String email, String nombre) {
+        Cliente cliente = new Cliente(email, nombre, null);
+        cliente.emailVerificado = true;
+        return cliente;
+    }
+
     // ----- reglas de dominio -----
 
     public void activar() {
@@ -83,6 +97,29 @@ public class Cliente extends EntidadEliminable {
 
     public boolean tieneContrasena() {
         return hashContrasena != null;
+    }
+
+    public void cambiarContrasena(String nuevoHash) {
+        this.hashContrasena = nuevoHash;
+    }
+
+    public void registrarAcceso(Instant momento) {
+        this.ultimoAccesoEn = momento;
+    }
+
+    public void verificarEmail() {
+        this.emailVerificado = true;
+    }
+
+    /**
+     * Lo único que el cliente edita de su perfil.
+     *
+     * <p>El correo no está aquí: es su identidad (RN-060) y cambiarlo sin
+     * volver a verificarlo permitiría apuntar la cuenta a un buzón ajeno.
+     */
+    public void actualizarPerfil(String nombre, String telefono) {
+        this.nombre = nombre;
+        this.telefono = telefono;
     }
 
     /** El correo se guarda siempre en minúsculas: si no, sería dos cuentas. */
@@ -102,6 +139,10 @@ public class Cliente extends EntidadEliminable {
 
     public boolean isEmailVerificado() {
         return emailVerificado;
+    }
+
+    public String getHashContrasena() {
+        return hashContrasena;
     }
 
     public String getNombre() {

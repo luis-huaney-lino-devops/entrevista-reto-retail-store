@@ -14,6 +14,12 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
  * @param vigenciaAcceso       duración del token de acceso. Corto a propósito:
  *                             no se puede revocar, así que caduca solo.
  * @param vigenciaRefrescoPanel duración de la cookie de refresco del panel
+ * @param vigenciaRefrescoTienda duración de la cookie de refresco de la tienda.
+ *                             Mucho más larga que la del panel -30 días frente
+ *                             a 12 horas- porque obligar a un comprador a
+ *                             volver a entrar cada mañana le cuesta la compra,
+ *                             y lo que su sesión puede hacer es incomparable
+ *                             con lo que puede hacer la de un administrador.
  * @param cookieSegura         marca {@code Secure} en la cookie. Falso solo en
  *                             desarrollo sobre http; en producción, siempre true.
  */
@@ -23,6 +29,7 @@ public record PropiedadesJwt(
         String emisor,
         Duration vigenciaAcceso,
         Duration vigenciaRefrescoPanel,
+        Duration vigenciaRefrescoTienda,
         boolean cookieSegura) {
 
     /** Valor de desarrollo. Si llega a producción, la aplicación se niega a arrancar. */
@@ -32,5 +39,6 @@ public record PropiedadesJwt(
         emisor = emisor == null ? "retail-store" : emisor;
         vigenciaAcceso = vigenciaAcceso == null ? Duration.ofMinutes(15) : vigenciaAcceso;
         vigenciaRefrescoPanel = vigenciaRefrescoPanel == null ? Duration.ofHours(12) : vigenciaRefrescoPanel;
+        vigenciaRefrescoTienda = vigenciaRefrescoTienda == null ? Duration.ofDays(30) : vigenciaRefrescoTienda;
     }
 }

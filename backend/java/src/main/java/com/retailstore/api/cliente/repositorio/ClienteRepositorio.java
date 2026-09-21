@@ -12,6 +12,18 @@ public interface ClienteRepositorio extends JpaRepository<Cliente, Long> {
 
     Optional<Cliente> findByEmail(String email);
 
+    /**
+     * El cliente de una sesión de la tienda.
+     *
+     * <p>Consulta HQL y no {@code findById} a propósito: la
+     * {@code @SQLRestriction} de la entidad no se aplica a la búsqueda por
+     * clave primaria, así que {@code findById} devolvería también a un cliente
+     * eliminado. Aquí sí se aplica, y el {@code activo} cierra el otro caso:
+     * un token de 15 minutos emitido justo antes de bloquear la cuenta.
+     */
+    @Query("select c from Cliente c where c.id = :id and c.activo = true")
+    Optional<Cliente> buscarActivo(@Param("id") Long id);
+
     Page<Cliente> findAllByOrderByNombreAsc(Pageable paginacion);
 
     /**

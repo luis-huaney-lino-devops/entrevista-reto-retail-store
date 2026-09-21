@@ -24,6 +24,7 @@ public enum CodigoError {
     // --- 401 -----------------------------------------------------------------
     UNAUTHENTICATED(HttpStatus.UNAUTHORIZED, "No autenticado"),
     INVALID_CREDENTIALS(HttpStatus.UNAUTHORIZED, "Credenciales inválidas"),
+    INVALID_PROVIDER_TOKEN(HttpStatus.UNAUTHORIZED, "Token del proveedor inválido"),
 
     // --- 403 -----------------------------------------------------------------
     FORBIDDEN(HttpStatus.FORBIDDEN, "Sin permiso"),
@@ -42,6 +43,8 @@ public enum CodigoError {
     CONVERSATION_NOT_FOUND(HttpStatus.NOT_FOUND, "Conversación no encontrada"),
     FILE_NOT_FOUND(HttpStatus.NOT_FOUND, "Archivo no encontrado"),
     ADMIN_NOT_FOUND(HttpStatus.NOT_FOUND, "Administrador no encontrado"),
+    ADDRESS_NOT_FOUND(HttpStatus.NOT_FOUND, "Dirección no encontrada"),
+    DISTRICT_NOT_FOUND(HttpStatus.NOT_FOUND, "Distrito no encontrado"),
     RESOURCE_NOT_FOUND(HttpStatus.NOT_FOUND, "Recurso no encontrado"),
 
     // --- 409 -----------------------------------------------------------------
@@ -75,13 +78,15 @@ public enum CodigoError {
     IMAGE_TOO_SMALL(HttpStatus.UNPROCESSABLE_ENTITY, "Imagen demasiado pequeña"),
     FILE_IN_USE(HttpStatus.UNPROCESSABLE_ENTITY, "El archivo está en uso"),
     LAST_ADMIN(HttpStatus.UNPROCESSABLE_ENTITY, "Es el último administrador activo"),
+    EMAIL_NOT_VERIFIED_BY_PROVIDER(HttpStatus.UNPROCESSABLE_ENTITY, "El proveedor no verificó el correo"),
 
     // --- 429 -----------------------------------------------------------------
     TOO_MANY_REQUESTS(HttpStatus.TOO_MANY_REQUESTS, "Demasiados intentos"),
 
     // --- 500 / 503 -----------------------------------------------------------
     INTERNAL_ERROR(HttpStatus.INTERNAL_SERVER_ERROR, "Error interno del servidor"),
-    SERVICE_UNAVAILABLE(HttpStatus.SERVICE_UNAVAILABLE, "Servicio no disponible");
+    SERVICE_UNAVAILABLE(HttpStatus.SERVICE_UNAVAILABLE, "Servicio no disponible"),
+    GOOGLE_NOT_CONFIGURED(HttpStatus.SERVICE_UNAVAILABLE, "Acceso con Google no configurado");
 
     private final HttpStatus estado;
     private final String titulo;

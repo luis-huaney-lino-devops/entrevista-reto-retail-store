@@ -3,6 +3,7 @@ package com.retailstore.api.seguridad.servicio;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
+import com.retailstore.api.cliente.dominio.Cliente;
 import com.retailstore.api.comun.error.CodigoError;
 import com.retailstore.api.comun.error.ExcepcionAplicacion;
 import com.retailstore.api.seguridad.config.PropiedadesJwt;
@@ -59,6 +60,54 @@ class ServicioJwtTest {
     }
 
     @Test
+    @DisplayName("un token de tienda trae el cliente, su correo y su nombre")
+    void emiteYValidaTienda() {
+        String token = jwt.emitirAccesoTienda(cliente());
+
+        var contenido = jwt.validarTienda(token);
+
+        assertThat(contenido.idCliente()).isEqualTo(42L);
+        assertThat(contenido.email()).isEqualTo("ana@ejemplo.pe");
+        assertThat(contenido.nombre()).isEqualTo("Ana Torres");
+    }
+
+    @Test
+    @DisplayName("un token de cliente NO abre el panel: WRONG_AUDIENCE")
+    void tokenDeClienteNoAbreElPanel() {
+        String token = jwt.emitirAccesoTienda(cliente());
+
+        assertThatThrownBy(() -> jwt.validarPanel(token))
+                .isInstanceOf(ExcepcionAplicacion.class)
+                .extracting(e -> ((ExcepcionAplicacion) e).codigo())
+                .isEqualTo(CodigoError.WRONG_AUDIENCE);
+    }
+
+    @Test
+    @DisplayName("y un token del panel NO abre la cuenta de la tienda: la separación corta en las dos direcciones")
+    void tokenDePanelNoAbreLaCuenta() {
+        String token = jwt.emitirAccesoPanel(administrador());
+
+        assertThatThrownBy(() -> jwt.validarTienda(token))
+                .isInstanceOf(ExcepcionAplicacion.class)
+                .extracting(e -> ((ExcepcionAplicacion) e).codigo())
+                .isEqualTo(CodigoError.WRONG_AUDIENCE);
+    }
+
+    @Test
+    @DisplayName("un token de tienda caducado se rechaza igual que uno de panel")
+    void rechazaTokenDeTiendaCaducado() {
+        String token = jwt.emitirAccesoTienda(cliente());
+        ServicioJwt masTarde = new ServicioJwt(
+                propiedades(SECRETO),
+                Clock.fixed(AHORA.plus(Duration.ofMinutes(16)), ZoneOffset.UTC));
+
+        assertThatThrownBy(() -> masTarde.validarTienda(token))
+                .isInstanceOf(ExcepcionAplicacion.class)
+                .extracting(e -> ((ExcepcionAplicacion) e).codigo())
+                .isEqualTo(CodigoError.UNAUTHENTICATED);
+    }
+
+    @Test
     @DisplayName("un token firmado con otro secreto se rechaza")
     void rechazaFirmaAjena() {
         ServicioJwt otro = new ServicioJwt(
@@ -106,19 +155,35 @@ class ServicioJwtTest {
 
     private static PropiedadesJwt propiedades(String secreto) {
         return new PropiedadesJwt(secreto, "retail-store",
-                Duration.ofMinutes(15), Duration.ofHours(12), false);
+                Duration.ofMinutes(15), Duration.ofHours(12), Duration.ofDays(30), false);
+    }
+
+    private static Cliente cliente() {
+        Cliente cliente = new Cliente("Ana@Ejemplo.PE", "Ana Torres", "999888777");
+        fijarId(cliente, Cliente.class, 42L);
+        return cliente;
     }
 
     private static Administrador administrador() {
         Administrador administrador = new Administrador(
                 "admin", "{bcrypt}hash", "Admin", RolAdministrador.SUPERADMINISTRADOR);
+        fijarId(administrador, Administrador.class, 7L);
+        return administrador;
+    }
+
+    /**
+     * El id lo pone la base al insertar y aquí no hay base. Se fija por
+     * reflexión antes que añadir un constructor que solo usarían las pruebas:
+     * un constructor así acaba usándose en producción y saltándose la
+     * generación de claves.
+     */
+    private static void fijarId(Object entidad, Class<?> tipo, Long id) {
         try {
-            Field campo = Administrador.class.getDeclaredField("id");
+            Field campo = tipo.getDeclaredField("id");
             campo.setAccessible(true);
-            campo.set(administrador, 7L);
+            campo.set(entidad, id);
         } catch (ReflectiveOperationException ex) {
             throw new IllegalStateException(ex);
         }
-        return administrador;
     }
 }

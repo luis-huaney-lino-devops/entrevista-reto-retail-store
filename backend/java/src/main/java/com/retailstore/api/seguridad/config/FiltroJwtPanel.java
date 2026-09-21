@@ -27,6 +27,11 @@ import org.springframework.web.servlet.HandlerExceptionResolver;
  * Un filtro que rechaza por su cuenta acaba duplicando -y contradiciendo- esas
  * reglas.
  *
+ * <p>Corre <strong>solo</strong> bajo {@code /api/v1/admin}. Antes miraba toda
+ * petición, y eso dejó de valer al existir tokens de tienda: el catálogo es
+ * público, pero una tienda que adjunta el token de su cliente a todas sus
+ * llamadas recibiría {@code WRONG_AUDIENCE} al pedir un producto.
+ *
  * <p>Los fallos se delegan al {@link HandlerExceptionResolver} para que salgan
  * por {@code ManejadorGlobalErrores}. Escribir el JSON a mano aquí produciría
  * un segundo formato de error, parecido pero distinto, que los clientes tendrían
@@ -44,6 +49,11 @@ public class FiltroJwtPanel extends OncePerRequestFilter {
                           @Qualifier("handlerExceptionResolver") HandlerExceptionResolver resolutorExcepciones) {
         this.jwt = jwt;
         this.resolutorExcepciones = resolutorExcepciones;
+    }
+
+    @Override
+    protected boolean shouldNotFilter(HttpServletRequest peticion) {
+        return !peticion.getRequestURI().startsWith(ConfiguracionSeguridad.RAIZ_PANEL);
     }
 
     @Override

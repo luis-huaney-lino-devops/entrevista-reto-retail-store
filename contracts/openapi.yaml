@@ -28,6 +28,123 @@ servers:
 - url: http://localhost:8080
   description: Generated server url
 paths:
+  /api/v1/cuenta/yo:
+    get:
+      tags:
+      - Cuenta (tienda)
+      summary: El perfil de quien trae el token
+      operationId: yo
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/CuentaRespuesta"
+      security:
+      - tokenTienda: []
+    put:
+      tags:
+      - Cuenta (tienda)
+      summary: "Cambiar nombre y teléfono. El correo no se edita: es la identidad\
+        \ (RN-060)"
+      operationId: actualizarPerfil
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ActualizarPerfilPeticion"
+        required: true
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/CuentaRespuesta"
+      security:
+      - tokenTienda: []
+  /api/v1/cuenta/favoritos/{productoId}:
+    put:
+      tags:
+      - Favoritos (tienda)
+      summary: Marcar un producto como favorito. Idempotente
+      operationId: agregar
+      parameters:
+      - name: productoId
+        in: path
+        required: true
+        schema:
+          type: integer
+          format: int64
+      responses:
+        "204":
+          description: No Content
+      security:
+      - tokenTienda: []
+    delete:
+      tags:
+      - Favoritos (tienda)
+      summary: Quitarlo de favoritos. Idempotente
+      operationId: quitar
+      parameters:
+      - name: productoId
+        in: path
+        required: true
+        schema:
+          type: integer
+          format: int64
+      responses:
+        "204":
+          description: No Content
+      security:
+      - tokenTienda: []
+  /api/v1/cuenta/direcciones/{id}:
+    put:
+      tags:
+      - Direcciones (tienda)
+      summary: Editar una dirección
+      operationId: actualizar
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: integer
+          format: int64
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/DireccionPeticion"
+        required: true
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/DireccionRespuesta"
+      security:
+      - tokenTienda: []
+    delete:
+      tags:
+      - Direcciones (tienda)
+      summary: "Eliminar una dirección. Es lógica (RN-086): las órdenes antiguas siguen\
+        \ explicándose"
+      operationId: eliminar
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: integer
+          format: int64
+      responses:
+        "204":
+          description: No Content
+      security:
+      - tokenTienda: []
   /api/v1/admin/subcategorias/{id}:
     get:
       tags:
@@ -54,7 +171,7 @@ paths:
       tags:
       - Subcategorías (panel)
       summary: Actualizar una subcategoría; admite moverla de categoría
-      operationId: actualizar
+      operationId: actualizar_1
       parameters:
       - name: id
         in: path
@@ -81,7 +198,7 @@ paths:
       tags:
       - Subcategorías (panel)
       summary: "Eliminación lógica: la fila se conserva con quién y cuándo"
-      operationId: eliminar
+      operationId: eliminar_1
       parameters:
       - name: id
         in: path
@@ -120,7 +237,7 @@ paths:
       tags:
       - Productos (panel)
       summary: Actualizar un producto. El SKU no se puede cambiar
-      operationId: actualizar_1
+      operationId: actualizar_2
       parameters:
       - name: id
         in: path
@@ -148,7 +265,7 @@ paths:
       - Productos (panel)
       summary: "Eliminación lógica: sale del catálogo y del panel, pero la fila se\
         \ conserva"
-      operationId: eliminar_1
+      operationId: eliminar_2
       parameters:
       - name: id
         in: path
@@ -187,7 +304,7 @@ paths:
       tags:
       - Marcas (panel)
       summary: Actualizar una marca
-      operationId: actualizar_2
+      operationId: actualizar_3
       parameters:
       - name: id
         in: path
@@ -214,7 +331,7 @@ paths:
       tags:
       - Marcas (panel)
       summary: "Eliminación lógica: la fila se conserva con quién y cuándo"
-      operationId: eliminar_2
+      operationId: eliminar_3
       parameters:
       - name: id
         in: path
@@ -253,7 +370,7 @@ paths:
       tags:
       - Cupones (panel)
       summary: Actualizar un cupón. El código no cambia
-      operationId: actualizar_3
+      operationId: actualizar_4
       parameters:
       - name: id
         in: path
@@ -280,7 +397,7 @@ paths:
       tags:
       - Cupones (panel)
       summary: "Eliminación lógica. El código no se libera: aparece en órdenes pasadas"
-      operationId: eliminar_3
+      operationId: eliminar_4
       parameters:
       - name: id
         in: path
@@ -319,7 +436,7 @@ paths:
       tags:
       - Categorías (panel)
       summary: Actualizar una categoría
-      operationId: actualizar_4
+      operationId: actualizar_5
       parameters:
       - name: id
         in: path
@@ -346,7 +463,7 @@ paths:
       tags:
       - Categorías (panel)
       summary: "Eliminación lógica: la fila se conserva con quién y cuándo"
-      operationId: eliminar_4
+      operationId: eliminar_5
       parameters:
       - name: id
         in: path
@@ -364,7 +481,7 @@ paths:
       tags:
       - Administradores
       summary: "Actualizar nombre, rol y estado"
-      operationId: actualizar_5
+      operationId: actualizar_6
       parameters:
       - name: id
         in: path
@@ -387,6 +504,192 @@ paths:
                 $ref: "#/components/schemas/AdministradorRespuesta"
       security:
       - tokenPanel: []
+  /api/v1/cuenta/yo/contrasena:
+    post:
+      tags:
+      - Cuenta (tienda)
+      summary: Cambiar o establecer la contraseña. La actual solo se pide si ya había
+        una (RN-065)
+      operationId: cambiarContrasena
+      parameters:
+      - name: refresco_tienda
+        in: cookie
+        required: false
+        schema:
+          type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CambiarContrasenaClientePeticion"
+        required: true
+      responses:
+        "200":
+          description: OK
+      security:
+      - tokenTienda: []
+  /api/v1/cuenta/salir:
+    post:
+      tags:
+      - Cuenta (tienda)
+      summary: Cerrar la sesión y revocar el refresco
+      operationId: salir
+      parameters:
+      - name: refresco_tienda
+        in: cookie
+        required: false
+        schema:
+          type: string
+      responses:
+        "200":
+          description: OK
+      security:
+      - tokenTienda: []
+  /api/v1/cuenta/registro:
+    post:
+      tags:
+      - Cuenta (tienda)
+      summary: Crear una cuenta. Responde 202 exista o no el correo (RN-061)
+      operationId: registro
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RegistroPeticion"
+        required: true
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                type: object
+                additionalProperties:
+                  type: string
+      security:
+      - tokenTienda: []
+  /api/v1/cuenta/refrescar:
+    post:
+      tags:
+      - Cuenta (tienda)
+      summary: Renovar el token de acceso con la cookie de refresco
+      operationId: refrescar
+      parameters:
+      - name: refresco_tienda
+        in: cookie
+        required: false
+        schema:
+          type: string
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/SesionClienteRespuesta"
+      security:
+      - tokenTienda: []
+  /api/v1/cuenta/google:
+    post:
+      tags:
+      - Cuenta (tienda)
+      summary: Entrar con el ID token de Google. Vincula si el correo ya tiene cuenta
+      operationId: accesoConGoogle
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AccesoGooglePeticion"
+        required: true
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/SesionClienteRespuesta"
+      security:
+      - tokenTienda: []
+  /api/v1/cuenta/direcciones:
+    get:
+      tags:
+      - Direcciones (tienda)
+      summary: "Las direcciones del cliente, la predeterminada primero"
+      operationId: listar
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/DireccionRespuesta"
+      security:
+      - tokenTienda: []
+    post:
+      tags:
+      - Direcciones (tienda)
+      summary: Añadir una dirección. La primera queda predeterminada siempre
+      operationId: crear
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/DireccionPeticion"
+        required: true
+      responses:
+        "201":
+          description: Created
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/DireccionRespuesta"
+      security:
+      - tokenTienda: []
+  /api/v1/cuenta/direcciones/{id}/predeterminada:
+    post:
+      tags:
+      - Direcciones (tienda)
+      summary: Marcarla como predeterminada. Desmarca la anterior
+      operationId: predeterminada
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: integer
+          format: int64
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/DireccionRespuesta"
+      security:
+      - tokenTienda: []
+  /api/v1/cuenta/acceso:
+    post:
+      tags:
+      - Cuenta (tienda)
+      summary: Entrar con correo y contraseña
+      operationId: acceso
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AccesoClientePeticion"
+        required: true
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/SesionClienteRespuesta"
+      security:
+      - tokenTienda: []
   /api/v1/conversaciones/{token}/mensajes:
     post:
       tags:
@@ -448,7 +751,7 @@ paths:
       tags:
       - Carrito
       summary: Crear un carrito vacío
-      operationId: crear
+      operationId: crear_1
       responses:
         "201":
           description: Created
@@ -532,7 +835,7 @@ paths:
       tags:
       - Subcategorías (panel)
       summary: Listado de subcategorías de toda la tienda
-      operationId: listar
+      operationId: listar_1
       parameters:
       - name: pagina
         in: query
@@ -564,7 +867,7 @@ paths:
       tags:
       - Subcategorías (panel)
       summary: Crear una subcategoría dentro de una categoría
-      operationId: crear_1
+      operationId: crear_2
       requestBody:
         content:
           application/json:
@@ -585,7 +888,7 @@ paths:
       tags:
       - Acceso al panel
       summary: Cerrar la sesión y revocar el refresco
-      operationId: salir
+      operationId: salir_1
       parameters:
       - name: refresco_panel
         in: cookie
@@ -600,7 +903,7 @@ paths:
       tags:
       - Acceso al panel
       summary: Renovar el token de acceso con la cookie de refresco
-      operationId: refrescar
+      operationId: refrescar_1
       parameters:
       - name: refresco_panel
         in: cookie
@@ -619,7 +922,7 @@ paths:
       tags:
       - Productos (panel)
       summary: Listado con búsqueda por nombre o SKU y filtro por estado
-      operationId: listar_1
+      operationId: listar_2
       parameters:
       - name: texto
         in: query
@@ -699,7 +1002,7 @@ paths:
       tags:
       - Productos (panel)
       summary: "Crear un producto. Nace inactivo: publicar es un PATCH aparte"
-      operationId: crear_2
+      operationId: crear_3
       requestBody:
         content:
           application/json:
@@ -784,7 +1087,7 @@ paths:
       tags:
       - Marcas (panel)
       summary: "Listado de marcas, activas e inactivas"
-      operationId: listar_2
+      operationId: listar_3
       parameters:
       - name: texto
         in: query
@@ -821,7 +1124,7 @@ paths:
       tags:
       - Marcas (panel)
       summary: Crear una marca
-      operationId: crear_3
+      operationId: crear_4
       requestBody:
         content:
           application/json:
@@ -842,7 +1145,7 @@ paths:
       tags:
       - Cupones (panel)
       summary: Listado de cupones
-      operationId: listar_3
+      operationId: listar_4
       parameters:
       - name: pagina
         in: query
@@ -874,7 +1177,7 @@ paths:
       tags:
       - Cupones (panel)
       summary: Crear un cupón
-      operationId: crear_4
+      operationId: crear_5
       requestBody:
         content:
           application/json:
@@ -895,7 +1198,7 @@ paths:
       tags:
       - Chat (panel)
       summary: "Bandeja de conversaciones, la más activa primero"
-      operationId: listar_4
+      operationId: listar_5
       parameters:
       - name: estado
         in: query
@@ -932,7 +1235,7 @@ paths:
       tags:
       - Chat (panel)
       summary: Empezar una conversación con un cliente
-      operationId: crear_5
+      operationId: crear_6
       requestBody:
         content:
           application/json:
@@ -1025,7 +1328,7 @@ paths:
       tags:
       - Categorías (panel)
       summary: Listado de categorías
-      operationId: listar_5
+      operationId: listar_6
       parameters:
       - name: pagina
         in: query
@@ -1057,7 +1360,7 @@ paths:
       tags:
       - Categorías (panel)
       summary: Crear una categoría
-      operationId: crear_6
+      operationId: crear_7
       requestBody:
         content:
           application/json:
@@ -1078,7 +1381,7 @@ paths:
       tags:
       - Archivos
       summary: "Listado de archivos, del más reciente al más antiguo"
-      operationId: listar_6
+      operationId: listar_7
       parameters:
       - name: pagina
         in: query
@@ -1142,7 +1445,7 @@ paths:
       tags:
       - Administradores
       summary: Listado de administradores
-      operationId: listar_7
+      operationId: listar_8
       parameters:
       - name: pagina
         in: query
@@ -1174,7 +1477,7 @@ paths:
       tags:
       - Administradores
       summary: Crear un administrador
-      operationId: crear_7
+      operationId: crear_8
       requestBody:
         content:
           application/json:
@@ -1531,6 +1834,65 @@ paths:
                 $ref: "#/components/schemas/CategoriaRespuesta"
       security:
       - tokenPanel: []
+  /api/v1/ubigeo/provincias/{id}/distritos:
+    get:
+      tags:
+      - Ubigeo
+      summary: Distritos de una provincia
+      operationId: distritos
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: integer
+          format: int32
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/UbigeoRespuesta"
+  /api/v1/ubigeo/departamentos:
+    get:
+      tags:
+      - Ubigeo
+      summary: "Los 25 departamentos, por nombre"
+      operationId: departamentos
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/UbigeoRespuesta"
+  /api/v1/ubigeo/departamentos/{id}/provincias:
+    get:
+      tags:
+      - Ubigeo
+      summary: Provincias de un departamento
+      operationId: provincias
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: integer
+          format: int32
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/UbigeoRespuesta"
   /api/v1/subcategorias/{slug}:
     get:
       tags:
@@ -1698,6 +2060,23 @@ paths:
             '*/*':
               schema:
                 $ref: "#/components/schemas/MarcaRespuesta"
+  /api/v1/cuenta/favoritos:
+    get:
+      tags:
+      - Favoritos (tienda)
+      summary: "Los favoritos del cliente, del más reciente al más antiguo"
+      operationId: listar_9
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/ProductoResumenRespuesta"
+      security:
+      - tokenTienda: []
   /api/v1/conversaciones/{token}:
     get:
       tags:
@@ -1776,7 +2155,7 @@ paths:
       tags:
       - Papelera (panel)
       summary: "Todo lo eliminado, con quién lo eliminó y cuándo"
-      operationId: listar_8
+      operationId: listar_10
       responses:
         "200":
           description: OK
@@ -1793,7 +2172,7 @@ paths:
       tags:
       - Órdenes (panel)
       summary: "Listado de órdenes, de la más reciente a la más antigua"
-      operationId: listar_9
+      operationId: listar_11
       parameters:
       - name: estado
         in: query
@@ -1938,7 +2317,7 @@ paths:
       tags:
       - Clientes (panel)
       summary: Listado de clientes con su número de órdenes y total comprado
-      operationId: listar_10
+      operationId: listar_12
       parameters:
       - name: texto
         in: query
@@ -2061,7 +2440,7 @@ paths:
       tags:
       - Administradores
       summary: Quién soy
-      operationId: yo
+      operationId: yo_1
       responses:
         "200":
           description: OK
@@ -2073,6 +2452,125 @@ paths:
       - tokenPanel: []
 components:
   schemas:
+    ActualizarPerfilPeticion:
+      type: object
+      properties:
+        nombre:
+          type: string
+          maxLength: 120
+          minLength: 0
+        telefono:
+          type: string
+          maxLength: 20
+          minLength: 0
+      required:
+      - nombre
+    CuentaRespuesta:
+      type: object
+      properties:
+        id:
+          type: integer
+          format: int64
+        email:
+          type: string
+        emailVerificado:
+          type: boolean
+        nombre:
+          type: string
+        telefono:
+          type: string
+        tieneContrasena:
+          type: boolean
+    DireccionPeticion:
+      type: object
+      properties:
+        distritoId:
+          type: integer
+          format: int32
+        etiqueta:
+          type: string
+          maxLength: 40
+          minLength: 0
+        destinatario:
+          type: string
+          maxLength: 120
+          minLength: 0
+        telefono:
+          type: string
+          maxLength: 20
+          minLength: 0
+        calle:
+          type: string
+          maxLength: 200
+          minLength: 0
+        numero:
+          type: string
+          maxLength: 20
+          minLength: 0
+        referencia:
+          type: string
+          maxLength: 300
+          minLength: 0
+        codigoPostal:
+          type: string
+          maxLength: 12
+          minLength: 0
+        latitud:
+          type: number
+          maximum: 90
+          minimum: -90
+        longitud:
+          type: number
+          maximum: 180
+          minimum: -180
+        predeterminada:
+          type: boolean
+      required:
+      - calle
+      - destinatario
+      - distritoId
+      - etiqueta
+      - telefono
+    DireccionRespuesta:
+      type: object
+      properties:
+        id:
+          type: integer
+          format: int64
+        etiqueta:
+          type: string
+        destinatario:
+          type: string
+        telefono:
+          type: string
+        calle:
+          type: string
+        numero:
+          type: string
+        referencia:
+          type: string
+        codigoPostal:
+          type: string
+        latitud:
+          type: number
+        longitud:
+          type: number
+        predeterminada:
+          type: boolean
+        distrito:
+          $ref: "#/components/schemas/UbigeoRespuesta"
+        provincia:
+          $ref: "#/components/schemas/UbigeoRespuesta"
+        departamento:
+          $ref: "#/components/schemas/UbigeoRespuesta"
+    UbigeoRespuesta:
+      type: object
+      properties:
+        id:
+          type: integer
+          format: int64
+        nombre:
+          type: string
     ActualizarSubcategoriaPeticion:
       type: object
       properties:
@@ -2456,6 +2954,75 @@ components:
         creadoEn:
           type: string
           format: date-time
+    CambiarContrasenaClientePeticion:
+      type: object
+      properties:
+        contrasenaActual:
+          type: string
+          maxLength: 200
+          minLength: 0
+        contrasenaNueva:
+          type: string
+          maxLength: 200
+          minLength: 0
+      required:
+      - contrasenaNueva
+    RegistroPeticion:
+      type: object
+      properties:
+        email:
+          type: string
+          maxLength: 160
+          minLength: 0
+        nombre:
+          type: string
+          maxLength: 120
+          minLength: 0
+        contrasena:
+          type: string
+          maxLength: 200
+          minLength: 0
+        telefono:
+          type: string
+          maxLength: 20
+          minLength: 0
+      required:
+      - contrasena
+      - email
+      - nombre
+    SesionClienteRespuesta:
+      type: object
+      properties:
+        tokenAcceso:
+          type: string
+        expiraEnSegundos:
+          type: integer
+          format: int64
+        cliente:
+          $ref: "#/components/schemas/CuentaRespuesta"
+    AccesoGooglePeticion:
+      type: object
+      properties:
+        credencial:
+          type: string
+          maxLength: 4000
+          minLength: 0
+      required:
+      - credencial
+    AccesoClientePeticion:
+      type: object
+      properties:
+        email:
+          type: string
+          maxLength: 160
+          minLength: 0
+        contrasena:
+          type: string
+          maxLength: 200
+          minLength: 0
+      required:
+      - contrasena
+      - email
     EnviarMensajePeticion:
       type: object
       properties:
@@ -3471,5 +4038,11 @@ components:
     tokenPanel:
       type: http
       description: Token de acceso del panel. Se obtiene en POST /api/v1/admin/acceso.
+      scheme: bearer
+      bearerFormat: JWT
+    tokenTienda:
+      type: http
+      description: Token de acceso del cliente. Se obtiene en POST /api/v1/cuenta/acceso
+        o /api/v1/cuenta/google.
       scheme: bearer
       bearerFormat: JWT

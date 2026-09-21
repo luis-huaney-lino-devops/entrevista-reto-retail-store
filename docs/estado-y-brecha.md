@@ -3,8 +3,8 @@
 **Qué existe hoy y qué falta.** Este documento manda sobre cualquier otro en lo
 que respecta al estado: el resto de `docs/` describe el objetivo.
 
-Actualizado tras cerrar el panel de clientes, el chat de atención por
-WebSocket, las notificaciones y la papelera.
+Actualizado tras cerrar la identidad del cliente de la tienda: registro,
+acceso, acceso con Google, direcciones con ubigeo y favoritos.
 
 ---
 
@@ -27,18 +27,21 @@ WebSocket, las notificaciones y la papelera.
 | Chat de atención al cliente por WebSocket, con adjuntos revisados | **Hecho** (`V008`) |
 | Notificaciones del panel, empujadas en vivo | **Hecho** (`V008`) |
 | Panel de administración (React) | **Hecho** |
-| Clientes: registro, acceso, Google, recuperación | **Falta** |
+| Identidad de la tienda: registro, acceso, Google, sesión con refresco rotativo | **Hecho** |
+| Ubigeo, direcciones del cliente y favoritos | **Hecho** |
+| Clientes: verificación de correo y recuperación de contraseña | **Falta** (necesita correo) |
 | Checkout: crear la orden desde la tienda | **Falta** |
 | Correo | **Falta** |
 | Tienda (Next.js) | **Falta** |
 
-**48 de las 68 reglas** del catálogo están implementadas. Las 20 restantes
-pertenecen a la identidad del cliente, al checkout y al correo.
+**53 de las 68 reglas** del catálogo están implementadas. Las restantes
+pertenecen al checkout y al correo.
 
 > Ojo con la palabra «clientes»: la **tabla** `cliente` y todo lo que el panel
-> hace con ella —ficha, historial, bloqueo, conversaciones— están hechos. Lo
-> que falta es que el cliente pueda **crearse una cuenta y entrar** desde la
-> tienda: registro, verificación por correo, Google, recuperación.
+> hace con ella —ficha, historial, bloqueo, conversaciones— están hechos, y
+> ahora también lo está que el cliente se cree una cuenta y entre desde la
+> tienda. Lo que falta de identidad es lo que **necesita correo**: verificar la
+> dirección (RN-063) y recuperar la contraseña (RN-066).
 
 > Las órdenes están **a medias a propósito**: las tablas, la máquina de estados
 > y el panel están hechos; lo que falta es quien las crea, que es el checkout de
@@ -69,11 +72,23 @@ Con la base y el backend en marcha:
   una imagen o un PDF que el servidor revisa antes de aceptar (RN-088).
 - Enterarse de lo que pasa sin recargar: la campana recibe los avisos por el
   mismo WebSocket, y un aviso de stock se cierra solo al reponer (RN-089).
+- Crear una cuenta en la tienda con correo y contraseña, y que el endpoint
+  responda lo mismo exista o no el correo (RN-061).
+- Entrar, y que la sesión se renueve sola con una cookie `httpOnly` que rota en
+  cada uso y tumba la familia entera si alguien reutiliza una vieja.
+- Entrar con Google: se verifica la firma contra el JWKS del proveedor, y si el
+  correo ya tiene cuenta **se vincula** en vez de crear otra (RN-064).
+- Editar el perfil, y establecer la primera contraseña si se entró con Google
+  sin que se pida «la actual», que nunca existió (RN-065).
+- Elegir departamento, provincia y distrito de tres listas encadenadas, y
+  guardar direcciones con esas coordenadas o sin ellas.
+- Tener favoritos que sobreviven al cambio de dispositivo, con un corazón que
+  se puede pulsar dos veces sin que pase nada.
 
-Lo verifican dos pruebas de extremo a extremo contra PostgreSQL real:
-`pruebas/humo-api.py` (**124 comprobaciones**) y `pruebas/humo-chat.py`
-(**60**). Las dos son idempotentes: montan el escenario que necesitan en vez de
-confiar en el estado que dejó la anterior.
+Lo verifican tres pruebas de extremo a extremo contra PostgreSQL real:
+`pruebas/humo-api.py` (**127 comprobaciones**), `pruebas/humo-chat.py` (**60**)
+y `pruebas/humo-cuenta.py` (**105**). Las tres son idempotentes: montan el
+escenario que necesitan en vez de confiar en el estado que dejó la anterior.
 
 ---
 
@@ -86,7 +101,9 @@ confiar en el estado que dejó la anterior.
 | Búsqueda | RN-020 … RN-026 | `ProductoSpecs`, `OrdenProducto`, `BusquedaProductoPeticion` |
 | Carrito | RN-030 … RN-035, RN-037 | `Carrito`, `ServicioCarrito` |
 | Cupones | RN-040, RN-041, RN-043, RN-044, RN-045 | `Cupon`, `CalculadoraCarrito` |
-| Contraseñas y acceso | RN-062, RN-067, RN-068 | `PoliticaContrasena`, `ServicioAccesoPanel`, `LimitadorIntentos` |
+| Contraseñas y acceso | RN-062, RN-067, RN-068 | `PoliticaContrasena`, `ServicioAccesoPanel`, `ServicioAccesoTienda`, `LimitadorIntentos` |
+| Identidad del cliente | RN-060, RN-061, RN-064, RN-065 | `Cliente`, `ServicioAccesoTienda`, `ServicioAccesoGoogle`, `VerificadorTokenGoogle`, `ServicioCuenta` |
+| Direcciones y favoritos | RN-086 | `ServicioDireccion`, `ServicioFavorito`, `ServicioUbigeo` |
 | Imágenes | RN-070 … RN-075 | `InspectorImagen`, `ProcesadorImagen`, `ServicioArchivo` |
 | Órdenes | RN-053, RN-054, RN-055 | `Orden`, `EstadoOrden`, `ServicioOrden` |
 | Eliminación lógica | RN-007, RN-086, RN-087 | `EntidadEliminable`, `ServicioPapelera`, `V006`, `Confirmar.tsx` |
@@ -100,6 +117,10 @@ confiar en el estado que dejó la anterior.
 | --- | --- | --- |
 | RN-042 (límite de usos del cupón) | Nadie incrementa `usos_actuales` | Se incrementa al **confirmar la compra**, y no hay checkout todavía. `Cupon.registrarUso()` ya existe y está probado |
 | RN-070 (validar por contenido) | AVIF se rechaza en lugar de aceptarse | La JVM no trae decodificador de AVIF. Aceptarlo a medias sería peor: se rechaza con un mensaje claro |
+| RN-061 (el registro no revela si el correo existe) | El correo «alguien intentó registrarse con tu correo» no se envía | La respuesta ya es idéntica en código, cuerpo y tiempo -se gasta el BCrypt en los dos caminos-. Lo que falta es el aviso al dueño legítimo, y necesita el bloque de correo |
+| RN-063 (comprar no exige verificar el correo) | La mitad que **sí** exige verificación -cambiar la contraseña, ver el historial- no se aplica | No hay forma de verificar: el endpoint de verificación y el correo llegan con el bloque 2. Exigirlo hoy dejaría a todo el mundo sin poder cambiar su contraseña |
+| RN-064 (vinculación solo con correo verificado) | Se aplica además al **crear**, no solo al vincular | Una cuenta creada por Google nace con `emailVerificado = true`; crearla con un correo que Google no verificó sería marcar como verificado algo que nadie verificó, y ocupar el correo de otra persona. Es más estricto que la tabla de `autenticacion.md` §4 a propósito |
+| RN-065 (nunca sin forma de entrar) | Solo la mitad de «establecer contraseña»; falta desvincular Google | No hay endpoint de desvinculación en el contrato de la tienda. Cuando lo haya, es donde entra `LAST_LOGIN_METHOD` |
 | RN-083 (efectos externos tras el commit) | Solo cubre el WebSocket | El correo todavía no existe. Las difusiones del chat y de las notificaciones sí van tras el commit (`RegistroSesionesWs.enviar`), y eso arregló un `409` por bloqueo optimista. La subida a R2 sigue yendo **antes** a propósito: así no queda una fila apuntando a un objeto inexistente |
 
 ---
@@ -108,15 +129,15 @@ confiar en el estado que dejó la anterior.
 
 El orden no es arbitrario: cada bloque necesita el anterior.
 
-### Bloque 1 — Clientes e identidad de la tienda
+### Bloque 1 — Verificación de correo y recuperación de contraseña
 
-Tablas `cliente`, `identidad_externa`, `token_un_solo_uso`. Registro que no
-revela si el correo existe (RN-061), verificación por correo, recuperación de
-contraseña, acceso con Google por Authorization Code + PKCE con la
-comprobación de `email_verified` (RN-064).
+Lo único que queda de la identidad del cliente, y va después del correo porque
+**es** correo: el enlace de verificación (RN-063) y el de recuperación
+(RN-066), los dos sobre la tabla `token_cliente`, que hoy no está mapeada
+porque ningún endpoint la usaría.
 
-Reglas: RN-060 … RN-066.
-Diseño ya escrito: [`backend/autenticacion.md`](backend/autenticacion.md).
+Reglas: RN-063 (la mitad que exige verificación), RN-066.
+Diseño ya escrito: [`backend/autenticacion.md`](backend/autenticacion.md) §3 y §5.
 
 ### Bloque 2 — Correo
 
@@ -168,6 +189,9 @@ Cosas que funcionan y que conviene tener escritas.
 | D-9 | `InspectorAdjunto` **no es un antivirus** | Cubre las formas conocidas de que un PDF ejecute algo al abrirlo, no un fallo del lector. Por eso el PDF se sirve con `Content-Disposition: attachment` y `nosniff` |
 | D-10 | La papelera no caduca | Lo eliminado se queda ahí para siempre. Hace falta una política de retención antes de que la tabla crezca de verdad |
 | D-11 | El chat no tiene histórico paginado | Un hilo se carga entero. Con conversaciones largas habrá que paginar hacia atrás |
+| D-12 | `contracts/openapi.yaml` no cubre todavía `/cuenta`, `/ubigeo` ni los favoritos | El contrato vive en el código y en Swagger (`/swagger`), que sí los sirve. Hay que regenerar el YAML — ver D-4 |
+| D-13 | La IP del limitador sale del **primer** valor de `X-Forwarded-For` | Si el proxy añade la IP real detrás de lo que mandó el cliente, el primer valor lo elige el cliente y el límite por IP se puede esquivar cambiando una cabecera. El límite por correo -que es el que protege la cuenta- no se esquiva así. Lo correcto es leer desde la derecha descartando los proxies conocidos; está igual en el panel y en la tienda |
+| D-14 | `token_cliente` está en el esquema y sin mapear | Es la tabla de los tokens de un solo uso. No se mapea porque no hay endpoint que los consuma: llega con el bloque de verificación y recuperación |
 
 ### Defectos cerrados
 

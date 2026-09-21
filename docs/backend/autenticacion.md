@@ -15,6 +15,14 @@ Dos audiencias que no se mezclan, y tres flujos de acceso para la primera.
 └──────────────────────────────────────────────────────────────┘
 ```
 
+> **Rutas.** Este documento escribe los endpoints del cliente como
+> `/api/v1/auth/...` porque así se diseñaron. Lo implementado cuelga de
+> **`/api/v1/cuenta`** -`/cuenta/registro`, `/cuenta/acceso`,
+> `/cuenta/refrescar`, `/cuenta/salir`, `/cuenta/google`, `/cuenta/yo`-, que es
+> lo que consume la tienda. El comportamiento de cada uno es el que se describe
+> aquí; solo cambia el prefijo. Los del panel sí son literales:
+> `/api/v1/admin/...`.
+
 **No comparten tabla, ni endpoint de acceso, ni token.** Un token de cliente
 jamás abre el panel, ni por un fallo de configuración: no llevan el mismo
 emisor ni la misma audiencia, y el filtro del panel exige ambas cosas.
@@ -148,8 +156,30 @@ existentes.
 
 ## 4. Acceso con Google
 
-Se usa **Authorization Code con PKCE**, no el flujo implícito ni el token de ID
-enviado desde el navegador.
+> **Lo implementado es la variante de ID token de Google Identity Services**, no
+> el Authorization Code que describe el resto de esta sección. El motivo es que
+> la tienda usa el botón oficial de Google, que entrega un `credential` -un ID
+> token ya firmado- al JavaScript de la página; no hay redirección, así que no
+> hay `code` que canjear ni `client_secret` que guardar.
+>
+> Lo que **no** cambia es lo único que de verdad protege: el token se valida
+> entero en el backend contra las claves públicas de Google -firma por `kid`,
+> emisor, audiencia contra `GOOGLE_CLIENT_ID`, vigencia- y se comprueba
+> `email_verified` antes de vincular nada (RN-064). Ver
+> `VerificadorTokenGoogle`.
+>
+> Tampoco hay `state` ni `nonce`, y aquí no hacen falta: lo que el `state`
+> garantiza en un flujo de redirección -que la respuesta pertenece a esta
+> petición y no a una provocada desde fuera- lo garantiza que el token llegue
+> en el cuerpo de una llamada que hace el propio usuario desde la página.
+>
+> La tabla de vinculación de más abajo sí se aplica tal cual, con un matiz: la
+> comprobación de `email_verified` se exige **también al crear** la cuenta, no
+> solo al vincular. Crear con un correo sin verificar significaría marcarlo
+> como verificado -Google no lo hizo- y ocupar el correo de otra persona.
+
+Se diseñó con **Authorization Code con PKCE**, no el flujo implícito ni el
+token de ID enviado desde el navegador.
 
 ```text
   Tienda                Backend                   Google

@@ -1,6 +1,7 @@
 package com.retailstore.api.catalogo.repositorio;
 
 import com.retailstore.api.catalogo.dominio.Producto;
+import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
 import org.springframework.data.jpa.repository.EntityGraph;
@@ -28,6 +29,19 @@ public interface ProductoRepositorio extends JpaRepository<Producto, Long>, JpaS
 
     @EntityGraph(attributePaths = {"subcategoria", "subcategoria.categoria", "marca", "imagenes", "imagenes.archivo"})
     Optional<Producto> findBySlugAndActivoTrue(String slug);
+
+    /** Visible en la tienda, por id. Un producto despublicado no existe para el comprador. */
+    Optional<Producto> findByIdAndActivoTrue(Long id);
+
+    /**
+     * Varios productos visibles con su grafo completo, en una consulta.
+     *
+     * <p>Lo usan los favoritos, que llegan como una lista de ids: sin el grafo
+     * serían cinco consultas por tarjeta, y una lista de deseos de veinte
+     * artículos son cien viajes a la base.
+     */
+    @EntityGraph(attributePaths = {"subcategoria", "subcategoria.categoria", "marca", "imagenes", "imagenes.archivo"})
+    List<Producto> findByIdInAndActivoTrue(Collection<Long> ids);
 
     /**
      * Relacionados (RN-025): hasta 4 de la misma subcategoría, excluyendo el

@@ -23,26 +23,51 @@ import org.springframework.web.servlet.HandlerExceptionResolver;
 /**
  * Reglas de acceso.
  *
- * <p>La tienda es pública y el panel no. Todo lo que cuelga de
- * {@code /api/v1/admin} exige un token con audiencia {@code admin}; el resto de
- * la API se sirve sin autenticación porque un catálogo detrás de un login no es
- * una tienda.
+ * <p>Tres zonas y no dos. Todo lo que cuelga de {@code /api/v1/admin} exige un
+ * token con audiencia {@code admin}; todo lo que cuelga de
+ * {@code /api/v1/cuenta} exige uno con audiencia de tienda; el resto se sirve
+ * sin autenticación porque un catálogo detrás de un login no es una tienda.
+ *
+ * <p>Las dos zonas autenticadas no se solapan en ninguna dirección: cada una
+ * tiene su filtro y su filtro exige su audiencia, así que un token del panel es
+ * tan inútil en {@code /cuenta} como uno de cliente en {@code /admin}.
  */
 @Configuration
 @EnableMethodSecurity
 @EnableConfigurationProperties(PropiedadesJwt.class)
 public class ConfiguracionSeguridad {
 
-    public static final String RUTA_ACCESO = "/api/v1/admin/acceso";
-    public static final String RUTA_REFRESCO = "/api/v1/admin/refrescar";
-    public static final String RUTA_SALIDA = "/api/v1/admin/salir";
+    public static final String RAIZ_PANEL = "/api/v1/admin";
+    public static final String RAIZ_CUENTA = "/api/v1/cuenta";
+
+    public static final String RUTA_ACCESO = RAIZ_PANEL + "/acceso";
+    public static final String RUTA_REFRESCO = RAIZ_PANEL + "/refrescar";
+    public static final String RUTA_SALIDA = RAIZ_PANEL + "/salir";
+
+    /**
+     * Lo que se puede hacer en {@code /cuenta} sin haber entrado todavía.
+     *
+     * <p>Son los cinco puntos por los que se entra y se sale. {@code /salir}
+     * está aquí a propósito: cerrar sesión con el token ya caducado tiene que
+     * borrar la cookie igualmente, y exigir sesión para salir deja al cliente
+     * con una cookie que no se puede quitar.
+     */
+    private static final String[] RUTAS_CUENTA_PUBLICAS = {
+            RAIZ_CUENTA + "/registro",
+            RAIZ_CUENTA + "/acceso",
+            RAIZ_CUENTA + "/google",
+            RAIZ_CUENTA + "/refrescar",
+            RAIZ_CUENTA + "/salir"};
 
     private final FiltroJwtPanel filtroJwt;
+    private final FiltroJwtTienda filtroJwtTienda;
     private final HandlerExceptionResolver resolutorExcepciones;
 
     public ConfiguracionSeguridad(FiltroJwtPanel filtroJwt,
+                                  FiltroJwtTienda filtroJwtTienda,
                                   @Qualifier("handlerExceptionResolver") HandlerExceptionResolver resolutorExcepciones) {
         this.filtroJwt = filtroJwt;
+        this.filtroJwtTienda = filtroJwtTienda;
         this.resolutorExcepciones = resolutorExcepciones;
     }
 
@@ -60,7 +85,9 @@ public class ConfiguracionSeguridad {
                 .authorizeHttpRequests(rutas -> rutas
                         .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
                         .requestMatchers(RUTA_ACCESO, RUTA_REFRESCO, RUTA_SALIDA).permitAll()
-                        .requestMatchers("/api/v1/admin/**").authenticated()
+                        .requestMatchers(RAIZ_PANEL + "/**").authenticated()
+                        .requestMatchers(RUTAS_CUENTA_PUBLICAS).permitAll()
+                        .requestMatchers(RAIZ_CUENTA + "/**").authenticated()
                         .requestMatchers("/swagger/**", "/swagger-ui/**", "/v3/api-docs/**", "/health").permitAll()
                         // El apretón de manos del WebSocket trae su propia
                         // credencial -un ticket o el token del hilo- y la
@@ -78,9 +105,29 @@ public class ConfiguracionSeguridad {
                                 peticion, respuesta, null,
                                 new ExcepcionAplicacion(CodigoError.FORBIDDEN,
                                         "No tienes permiso para esta operación."))))
-                .addFilterBefore(filtroJwt, UsernamePasswordAuthenticationFilter.class);
+                .addFilterBefore(filtroJwt, UsernamePasswordAuthenticationFilter.class)
+                .addFilterBefore(filtroJwtTienda, UsernamePasswordAuthenticationFilter.class);
 
         return http.build();
+    }
+
+    /**
+     * Las rutas de sesión no miran la cabecera {@code Authorization}.
+     *
+     * <p>Lo usa {@link FiltroJwtTienda}, y donde importa es en {@code /salir}:
+     * una tienda que adjunta el token de acceso a todas sus llamadas cerraría
+     * sesión con uno ya caducado, y validarlo daría un 401 en lugar del 204 que
+     * borra la cookie -el cliente se quedaría sin poder salir justo cuando más
+     * quiere hacerlo-. En las otras cuatro un token tampoco aporta nada: son
+     * los puntos por los que se entra.
+     */
+    public static boolean esRutaDeSesionDeCuenta(String uri) {
+        for (String ruta : RUTAS_CUENTA_PUBLICAS) {
+            if (ruta.equals(uri)) {
+                return true;
+            }
+        }
+        return false;
     }
 
     /**

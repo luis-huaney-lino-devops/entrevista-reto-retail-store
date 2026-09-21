@@ -66,6 +66,7 @@ El `message` va en español: lo lee una persona.
 | --- | --- |
 | `UNAUTHENTICATED` | Sin token, token mal formado, firma inválida, token vencido, o audiencia incorrecta |
 | `INVALID_CREDENTIALS` | Correo o contraseña incorrectos, o cuenta desactivada |
+| `INVALID_PROVIDER_TOKEN` | El ID token de Google no supera la verificación: firma, emisor, audiencia o vigencia |
 
 `INVALID_CREDENTIALS` es **un solo código para los tres casos** (RN-067):
 correo inexistente, contraseña equivocada y cuenta desactivada. Mismo mensaje,
@@ -109,7 +110,14 @@ antes que la de existencia.
 | `COUPON_NOT_FOUND` | El código no existe |
 | `FILE_NOT_FOUND` | |
 | `ADMIN_NOT_FOUND` | No hay administrador con ese id o usuario |
+| `ADDRESS_NOT_FOUND` | No hay dirección con ese id **en la cuenta que pregunta** |
+| `DISTRICT_NOT_FOUND` | El `distritoId` de una dirección no existe |
 | `RESOURCE_NOT_FOUND` | La ruta no existe |
+
+**La dirección de otro cliente es `404`, no `403`.** Un `403` confirmaría que
+esa dirección existe, y con ids correlativos eso es un contador de direcciones
+de la tienda. La consulta va acotada por cliente para que no haya forma de
+equivocarse.
 
 **Un producto inactivo es `404` en la tienda y `200` en el panel.** No es una
 incoherencia: para el comprador ese producto no existe, y decirle «existe pero
@@ -245,6 +253,12 @@ cuándo reintentar y lo hace de inmediato, empeorando el problema.
 | --- | --- |
 | `INTERNAL_ERROR` | Cualquier fallo no manejado |
 | `SERVICE_UNAVAILABLE` | Una dependencia no responde: base de datos, R2, SMTP |
+| `GOOGLE_NOT_CONFIGURED` | Falta `GOOGLE_CLIENT_ID` en el entorno |
+
+`GOOGLE_NOT_CONFIGURED` es `503` y no `500` porque el servicio no está roto:
+falta configurarlo, y funcionará en cuanto se haga. El `detail` nombra la
+variable que falta, para que nadie depure durante una hora algo que es una
+línea de entorno.
 
 El cuerpo de `INTERNAL_ERROR` es fijo y no lleva más que el identificador de
 correlación (RN-080):

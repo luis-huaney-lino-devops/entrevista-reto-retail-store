@@ -1,6 +1,7 @@
 package com.retailstore.api.seguridad.servicio;
 
 import com.retailstore.api.comun.error.CodigoError;
+import com.retailstore.api.cliente.dominio.Cliente;
 import com.retailstore.api.comun.error.ExcepcionAplicacion;
 import com.retailstore.api.seguridad.config.PropiedadesJwt;
 import com.retailstore.api.seguridad.dominio.Administrador;
@@ -34,6 +35,8 @@ public class ServicioJwt {
     private static final int BYTES_MINIMOS_CLAVE = 32;
     private static final String CLAIM_USUARIO = "usuario";
     private static final String CLAIM_ROL = "rol";
+    private static final String CLAIM_EMAIL = "email";
+    private static final String CLAIM_NOMBRE = "nombre";
 
     private final SecretKey clave;
     private final PropiedadesJwt propiedades;
@@ -70,6 +73,29 @@ public class ServicioJwt {
     }
 
     /**
+     * Token de acceso de un cliente de la tienda.
+     *
+     * <p>Lleva el correo y el nombre para que la tienda pinte la cabecera sin
+     * una llamada más. <strong>No lleva rol ni permiso alguno</strong>: no hay
+     * nada que un cliente pueda hacer que dependa de un claim, y un claim de
+     * autorización en un token de 30 días de vida efectiva es justo lo que no
+     * se quiere revisar.
+     */
+    public String emitirAccesoTienda(Cliente cliente) {
+        Instant ahora = reloj.instant();
+        return Jwts.builder()
+                .issuer(propiedades.emisor())
+                .audience().add(AUDIENCIA_TIENDA).and()
+                .subject(String.valueOf(cliente.getId()))
+                .claim(CLAIM_EMAIL, cliente.getEmail())
+                .claim(CLAIM_NOMBRE, cliente.getNombre())
+                .issuedAt(Date.from(ahora))
+                .expiration(Date.from(ahora.plus(propiedades.vigenciaAcceso())))
+                .signWith(clave, Jwts.SIG.HS256)
+                .compact();
+    }
+
+    /**
      * Valida firma, emisor, vigencia y audiencia.
      *
      * @throws ExcepcionAplicacion {@code UNAUTHENTICATED} si el token no es
@@ -89,6 +115,24 @@ public class ServicioJwt {
                 Long.valueOf(claims.getSubject()),
                 claims.get(CLAIM_USUARIO, String.class),
                 RolAdministrador.valueOf(claims.get(CLAIM_ROL, String.class)));
+    }
+
+    /**
+     * El espejo de {@link #validarPanel}: aquí la audiencia que se exige es la
+     * de la tienda, así que un token del panel tampoco entra en la cuenta de un
+     * cliente. La separación corta en las dos direcciones o no es separación.
+     */
+    public ContenidoTokenCliente validarTienda(String token) {
+        Claims claims = analizar(token);
+        Set<String> audiencia = claims.getAudience();
+        if (audiencia == null || !audiencia.contains(AUDIENCIA_TIENDA)) {
+            throw new ExcepcionAplicacion(CodigoError.WRONG_AUDIENCE,
+                    "Este token no sirve para la cuenta de la tienda.");
+        }
+        return new ContenidoTokenCliente(
+                Long.valueOf(claims.getSubject()),
+                claims.get(CLAIM_EMAIL, String.class),
+                claims.get(CLAIM_NOMBRE, String.class));
     }
 
     public long segundosDeVigenciaAcceso() {
@@ -114,7 +158,11 @@ public class ServicioJwt {
         }
     }
 
-    /** Lo que el filtro necesita del token, ya validado. */
+    /** Lo que el filtro del panel necesita del token, ya validado. */
     public record ContenidoToken(Long idAdministrador, String usuario, RolAdministrador rol) {
+    }
+
+    /** Lo que el filtro de la tienda necesita del token, ya validado. */
+    public record ContenidoTokenCliente(Long idCliente, String email, String nombre) {
     }
 }
