@@ -53,6 +53,11 @@ export default function Acceso() {
   return (
     <div className="acceso">
       <aside className="panel-marca">
+        {/* El isotipo del propio logo, enorme y casi transparente. Es la marca
+            haciendo de fondo: ni una foto de archivo que no dice nada ni un
+            azul liso. */}
+        <img className="filigrana" src="/isotipo.webp" alt="" aria-hidden width={256} height={256} />
+
         <div className="logo-grande">
           <img src="/logo.webp" alt="Retail Store" width={480} height={343} />
         </div>
@@ -85,6 +90,10 @@ export default function Acceso() {
           <div className="logo-movil">
             <img src="/logo.webp" alt="Retail Store" width={480} height={343} />
           </div>
+
+          {/* El isotipo también preside el formulario: los dos lados son la
+              misma marca, y el naranja aparece antes de llegar al botón. */}
+          <img className="sello" src="/isotipo.webp" alt="" aria-hidden width={256} height={256} />
 
           <h3>Entrar al panel</h3>
           <p className="intro">Usa las credenciales que te dieron. No hay registro público.</p>

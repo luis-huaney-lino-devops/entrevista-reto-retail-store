@@ -1094,11 +1094,39 @@ textarea.con-error {
    blanca porque su azul tinta desaparecería contra el degradado. */
 .acceso .panel-marca .logo-grande img {
   display: block;
-  height: 72px;
+  height: 76px;
   width: auto;
   background: #fff;
-  border-radius: 14px;
-  padding: 10px 16px;
+  border-radius: 16px;
+  padding: 12px 18px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.28);
+}
+
+/* El carrito del logo, a tamaño de cartel y casi invisible. Recortado por el
+   panel, que ya tiene overflow: hidden. */
+.acceso .panel-marca .filigrana {
+  position: absolute;
+  width: 460px;
+  height: auto;
+  right: -70px;
+  bottom: -60px;
+  opacity: 0.08;
+  pointer-events: none;
+  /* Encima de los halos —que no tienen z-index— pero debajo del texto, que lo
+     lleva igual y viene después en el documento. */
+  z-index: 1;
+}
+
+/* Una regla naranja bajo el titular: es el segundo color del logo entrando en
+   la composición, y no solo en el botón de enviar. */
+.acceso .panel-marca h2::after {
+  content: '';
+  display: block;
+  width: 56px;
+  height: 4px;
+  border-radius: 2px;
+  margin-top: 18px;
+  background: var(--marca);
 }
 
 .acceso .logo-movil {
@@ -1164,19 +1192,47 @@ textarea.con-error {
   display: grid;
   place-items: center;
   padding: 32px;
-  background: var(--superficie);
 }
 
+/*
+ * El formulario es una tarjeta y no texto suelto sobre el fondo: así el lado
+ * derecho deja de ser medio blanco vacío y la vista sabe dónde tiene que
+ * mirar. La franja de arriba son los dos colores del logo, en ese orden.
+ */
 .acceso form {
+  position: relative;
   width: 100%;
-  max-width: 352px;
+  max-width: 392px;
+  padding: 30px 30px 26px;
+  background: var(--superficie);
+  border: 1px solid var(--borde);
+  border-radius: 16px;
+  box-shadow: 0 18px 44px -20px rgba(16, 24, 40, 0.28), var(--sombra-s);
+  overflow: hidden;
+}
+
+.acceso form::before {
+  content: '';
+  position: absolute;
+  inset: 0 0 auto;
+  height: 4px;
+  background: linear-gradient(90deg, var(--marca) 0%, var(--marca) 38%, var(--tinta) 100%);
+}
+
+.acceso form .sello {
+  display: block;
+  width: 46px;
+  height: 46px;
+  margin-bottom: 16px;
 }
 
 .acceso form h3 {
-  font-size: 22px;
-  font-weight: 650;
+  font-family: var(--fuente-marca);
+  font-size: 23px;
+  font-weight: 700;
   margin: 0 0 6px;
   letter-spacing: -0.02em;
+  color: var(--tinta);
 }
 
 .acceso form .intro {
@@ -1226,6 +1282,9 @@ textarea.con-error {
 }
 
 .acceso button[type='submit'] {
+  background: linear-gradient(180deg, #f5741a 0%, var(--marca) 55%, var(--marca-oscura) 100%);
+  border-color: var(--marca-oscura);
+  box-shadow: 0 6px 16px -6px rgba(239, 100, 7, 0.65);
   width: 100%;
   padding: 10px;
   margin-top: 6px;

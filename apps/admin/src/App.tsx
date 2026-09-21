@@ -1,5 +1,5 @@
 import { Suspense, lazy } from 'react'
-import { Navigate, Route, Routes } from 'react-router-dom'
+import { Navigate, Route, Routes, useLocation } from 'react-router-dom'
 import Disposicion from './componentes/Disposicion'
 import Acceso from './paginas/Acceso'
 import Administradores from './paginas/Administradores'
@@ -29,8 +29,24 @@ const Tablero = lazy(() => import('./paginas/Tablero'))
  */
 const Conversaciones = lazy(() => import('./paginas/Conversaciones'))
 
+/**
+ * A dónde ir después de entrar.
+ *
+ * <p>Se comprueba que sea una ruta de este panel y no `/login`: el estado de
+ * la navegación lo puede fabricar cualquiera, y una cadena que empiece por
+ * `//` o por `http:` convertiría el acceso en un salto a otro sitio.
+ */
+function destinoTrasEntrar(estado: unknown): string {
+  const desde = (estado as { desde?: unknown } | null)?.desde
+  if (typeof desde !== 'string' || !desde.startsWith('/') || desde.startsWith('//')) {
+    return '/productos'
+  }
+  return desde.startsWith('/login') ? '/productos' : desde
+}
+
 export default function App() {
   const { administrador, comprobando } = useSesion()
+  const ubicacion = useLocation()
 
   // Mientras se comprueba la cookie de refresco no se decide nada: pintar el
   // formulario de acceso aquí haría parpadear el login en cada recarga de
@@ -39,9 +55,27 @@ export default function App() {
     return <p className="cargando">Comprobando la sesión…</p>
   }
 
+  // Sin sesión todo lleva a /login, y el acceso tiene su propia URL en vez de
+  // pintarse encima de la que hubiera: así «cerrar sesión» lleva a un sitio
+  // concreto, el navegador puede guardarla y el formulario no aparece bajo una
+  // dirección que dice /productos.
   if (!administrador) {
-    return <Acceso />
+    return (
+      <Routes>
+        <Route path="/login" element={<Acceso />} />
+        <Route
+          path="*"
+          element={
+            // De dónde venía, para devolverle ahí tras entrar en lugar de
+            // soltarle siempre en la misma página.
+            <Navigate to="/login" replace state={{ desde: ubicacion.pathname + ubicacion.search }} />
+          }
+        />
+      </Routes>
+    )
   }
+
+  const volverA = destinoTrasEntrar(ubicacion.state)
 
   return (
     <Disposicion>
@@ -49,6 +83,9 @@ export default function App() {
         <Routes>
           {/* La raíz lleva a productos y no al tablero: el tablero se mira
               una vez al día, el catálogo se trabaja todo el día. */}
+          {/* Ya dentro, /login no tiene nada que enseñar: devuelve a donde
+              se intentaba ir antes de que le pidieran la contraseña. */}
+          <Route path="/login" element={<Navigate to={volverA} replace />} />
           <Route path="/" element={<Navigate to="/productos" replace />} />
           <Route path="/tablero" element={<Tablero />} />
           <Route path="/productos" element={<Productos />} />

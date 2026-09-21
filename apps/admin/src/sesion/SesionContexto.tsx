@@ -1,5 +1,6 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react'
 import type { ReactNode } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { alExpirarSesion, fijarToken, intentarRefrescar } from '../api/cliente'
 import { sesion as api } from '../api/recursos'
 import type { Administrador } from '../api/tipos'
@@ -17,6 +18,9 @@ const Contexto = createContext<EstadoSesion | null>(null)
 export function ProveedorSesion({ children }: { children: ReactNode }) {
   const [administrador, setAdministrador] = useState<Administrador | null>(null)
   const [comprobando, setComprobando] = useState(true)
+  // El proveedor vive dentro del router a propósito: cerrar sesión no es solo
+  // olvidar el token, es llevar a la persona a algún sitio.
+  const navegar = useNavigate()
 
   // Al arrancar se intenta recuperar la sesión con la cookie httpOnly. Sin
   // esto, pulsar F5 en el panel expulsaría a quien está trabajando, aunque su
@@ -46,8 +50,13 @@ export function ProveedorSesion({ children }: { children: ReactNode }) {
   // Cuando el cliente HTTP agota su reintento, el estado de React tiene que
   // enterarse: si no, la interfaz seguiría mostrando el panel sin sesión.
   useEffect(() => {
-    alExpirarSesion(() => setAdministrador(null))
-  }, [])
+    alExpirarSesion(() => {
+      setAdministrador(null)
+      // Caducar a mitad de una acción tiene que acabar igual que cerrar
+      // sesión a mano: en el formulario, con la URL diciéndolo.
+      navegar('/login', { replace: true })
+    })
+  }, [navegar])
 
   const acceder = useCallback(async (usuario: string, contrasena: string) => {
     const nueva = await api.acceder(usuario, contrasena)
@@ -63,8 +72,9 @@ export function ProveedorSesion({ children }: { children: ReactNode }) {
       // usuario "dentro" porque falló la red es peor que cerrarla de más.
       fijarToken(null)
       setAdministrador(null)
+      navegar('/login', { replace: true })
     }
-  }, [])
+  }, [navegar])
 
   const valor = useMemo(
     () => ({ administrador, comprobando, acceder, salir }),
