@@ -1,0 +1,525 @@
+# -*- coding: utf-8 -*-
+"""Prueba de humo de extremo a extremo contra la API en marcha."""
+import json
+import struct
+import sys
+import urllib.error
+import urllib.request
+import uuid
+import zlib
+
+BASE = "http://localhost:8080/api/v1"
+ok = 0
+fallos = []
+
+
+def pedir(metodo, ruta, cuerpo=None, token=None, cabeceras=None, cuerpo_crudo=None, tipo=None):
+    url = BASE + ruta if ruta.startswith("/") else ruta
+    datos = None
+    cab = {"Accept": "application/json"}
+    if cuerpo is not None:
+        datos = json.dumps(cuerpo).encode("utf-8")
+        cab["Content-Type"] = "application/json"
+    if cuerpo_crudo is not None:
+        datos = cuerpo_crudo
+        cab["Content-Type"] = tipo
+    if token:
+        cab["Authorization"] = "Bearer " + token
+    if cabeceras:
+        cab.update(cabeceras)
+    pet = urllib.request.Request(url, data=datos, headers=cab, method=metodo)
+    try:
+        with urllib.request.urlopen(pet) as r:
+            texto = r.read().decode("utf-8")
+            return r.status, (json.loads(texto) if texto else None), dict(r.headers)
+    except urllib.error.HTTPError as e:
+        texto = e.read().decode("utf-8")
+        try:
+            return e.code, json.loads(texto), dict(e.headers)
+        except json.JSONDecodeError:
+            return e.code, {"crudo": texto[:300]}, dict(e.headers)
+
+
+def revisar(nombre, condicion, detalle=""):
+    global ok
+    if condicion:
+        ok += 1
+        print("  OK   " + nombre)
+    else:
+        fallos.append(nombre + (" | " + str(detalle) if detalle else ""))
+        print("  FALLA " + nombre + (" | " + str(detalle)[:300] if detalle else ""))
+
+
+def png(ancho, alto, color=(40, 120, 200)):
+    """PNG minimo, escrito a mano para no depender de Pillow."""
+    filas = b"".join(b"\x00" + bytes(color) * ancho for _ in range(alto))
+
+    def trozo(tipo, datos):
+        return (struct.pack(">I", len(datos)) + tipo + datos
+                + struct.pack(">I", zlib.crc32(tipo + datos) & 0xFFFFFFFF))
+
+    return (b"\x89PNG\r\n\x1a\n"
+            + trozo(b"IHDR", struct.pack(">IIBBBBB", ancho, alto, 8, 2, 0, 0, 0))
+            + trozo(b"IDAT", zlib.compress(filas))
+            + trozo(b"IEND", b""))
+
+
+def multipart(campos, archivo):
+    frontera = "----limite" + uuid.uuid4().hex
+    partes = []
+    for clave, valor in campos.items():
+        partes.append(("--" + frontera + "\r\n"
+                       + 'Content-Disposition: form-data; name="%s"\r\n\r\n' % clave
+                       + valor + "\r\n").encode("utf-8"))
+    nombre, contenido, tipo = archivo
+    partes.append(("--" + frontera + "\r\n"
+                   + 'Content-Disposition: form-data; name="archivo"; filename="%s"\r\n' % nombre
+                   + "Content-Type: %s\r\n\r\n" % tipo).encode("utf-8"))
+    partes.append(contenido)
+    partes.append(("\r\n--" + frontera + "--\r\n").encode("utf-8"))
+    return b"".join(partes), "multipart/form-data; boundary=" + frontera
+
+
+print("=== 1. Catálogo público ===")
+s, productos, cab = pedir("GET", "/productos?tamanoPagina=5")
+revisar("GET /productos devuelve 200", s == 200, s)
+revisar("trae al menos los 28 productos de la semilla",
+        productos and productos["totalItems"] >= 28,
+        productos.get("totalItems") if productos else None)
+revisar("la página trae 5 elementos", productos and len(productos["items"]) == 5)
+revisar("el resumen NO expone el SKU", productos and "sku" not in productos["items"][0],
+        list(productos["items"][0].keys()) if productos else None)
+revisar("los campos JSON están en español",
+        productos and {"precio", "precioAnterior", "hayStock"} <= set(productos["items"][0]))
+revisar("toda respuesta lleva identificador de correlación", "X-Correlation-Id" in cab)
+
+s, menu, _ = pedir("GET", "/categorias")
+revisar("GET /categorias devuelve las categorías activas", s == 200 and len(menu) >= 6,
+        len(menu) if menu else s)
+revisar("cada categoría trae sus subcategorías", menu and len(menu[0]["subcategorias"]) >= 3,
+        len(menu[0]["subcategorias"]) if menu else None)
+
+s, detalle, _ = pedir("GET", "/productos/audifonos-bluetooth-pulse-x")
+revisar("detalle por slug", s == 200 and detalle["nombre"].startswith("Audífonos"), s)
+revisar("el detalle trae las 4 variantes de imagen",
+        detalle and detalle["imagenes"] and detalle["imagenes"][0]["miniatura"].endswith("160/160.webp"))
+revisar("el detalle trae la ruta categoría/subcategoría",
+        detalle and detalle["categoria"]["slug"] == "tecnologia"
+        and detalle["subcategoria"]["slug"] == "audio-tecnologia")
+
+s, relacionados, _ = pedir("GET", "/productos/audifonos-bluetooth-pulse-x/relacionados")
+revisar("relacionados excluye el producto actual",
+        s == 200 and all(p["slug"] != "audifonos-bluetooth-pulse-x" for p in relacionados))
+
+s, cuerpo, _ = pedir("GET", "/productos?precioMinimo=500&precioMaximo=100")
+revisar("rango de precios invertido -> 422 INVALID_PRICE_RANGE",
+        s == 422 and cuerpo["code"] == "INVALID_PRICE_RANGE", (s, cuerpo.get("code")))
+
+s, cuerpo, _ = pedir("GET", "/productos?orden=inventado")
+revisar("orden desconocido -> 400 VALIDATION_ERROR",
+        s == 400 and cuerpo["code"] == "VALIDATION_ERROR", (s, cuerpo.get("code")))
+
+s, cuerpo, _ = pedir("GET", "/productos?texto=%25")
+revisar("buscar '%' no devuelve el catálogo entero (RN-026)",
+        s == 200 and cuerpo["totalItems"] == 0, cuerpo.get("totalItems") if s == 200 else s)
+
+s, cuerpo, _ = pedir("GET", "/productos/no-existe")
+revisar("slug inexistente -> 404 PRODUCT_NOT_FOUND",
+        s == 404 and cuerpo["code"] == "PRODUCT_NOT_FOUND", (s, cuerpo.get("code")))
+revisar("el error trae correlationId", cuerpo.get("correlationId") is not None)
+
+print("\n=== 2. Acceso al panel ===")
+s, cuerpo, _ = pedir("GET", "/admin/productos")
+revisar("panel sin token -> 401 UNAUTHENTICATED",
+        s == 401 and cuerpo["code"] == "UNAUTHENTICATED", (s, cuerpo.get("code")))
+
+s, cuerpo, _ = pedir("POST", "/admin/acceso", {"usuario": "admin", "contrasena": "equivocada"})
+revisar("contraseña incorrecta -> 401 INVALID_CREDENTIALS",
+        s == 401 and cuerpo["code"] == "INVALID_CREDENTIALS", (s, cuerpo.get("code")))
+
+s, cuerpo, _ = pedir("POST", "/admin/acceso", {"usuario": "nadie", "contrasena": "equivocada"})
+revisar("usuario inexistente da el MISMO código (RN-067)",
+        s == 401 and cuerpo["code"] == "INVALID_CREDENTIALS", (s, cuerpo.get("code")))
+
+s, sesion, cab = pedir("POST", "/admin/acceso", {"usuario": "admin", "contrasena": "AdminRetail2026!"})
+revisar("acceso correcto -> 200", s == 200, (s, sesion))
+token = sesion["tokenAcceso"] if s == 200 else None
+revisar("devuelve token de acceso y caducidad", token and sesion["expiraEnSegundos"] == 900)
+revisar("NO devuelve el refresco en el cuerpo", "tokenRefresco" not in sesion)
+cookie = cab.get("Set-Cookie", "")
+revisar("el refresco viaja en cookie httpOnly",
+        "refresco_panel=" in cookie and "HttpOnly" in cookie, cookie[:120])
+revisar("la cookie es SameSite=Lax y de ruta /api/v1/admin",
+        "SameSite=Lax" in cookie and "Path=/api/v1/admin" in cookie, cookie[:120])
+refresco = cookie.split("refresco_panel=")[1].split(";")[0] if "refresco_panel=" in cookie else None
+
+s, cuerpo, _ = pedir("GET", "/admin/administradores/yo", token=token)
+revisar("GET /admin/administradores/yo con token", s == 200 and cuerpo["usuario"] == "admin", (s, cuerpo))
+revisar("nunca devuelve el hash de contraseña", "hashContrasena" not in cuerpo and "contrasena" not in cuerpo)
+
+s, cuerpo, _ = pedir("GET", "/admin/productos", token="esto.no.es.un.token")
+revisar("token ilegible -> 401", s == 401 and cuerpo["code"] == "UNAUTHENTICATED", (s, cuerpo.get("code")))
+
+print("\n=== 3. Rotación del refresco ===")
+s, sesion2, cab2 = pedir("POST", "/admin/refrescar", {}, cabeceras={"Cookie": "refresco_panel=" + refresco})
+revisar("refrescar emite una sesión nueva", s == 200 and sesion2["tokenAcceso"], (s, sesion2))
+refresco2 = cab2.get("Set-Cookie", "").split("refresco_panel=")[1].split(";")[0]
+revisar("el refresco rota (token nuevo distinto)", refresco2 != refresco)
+
+s, cuerpo, _ = pedir("POST", "/admin/refrescar", {}, cabeceras={"Cookie": "refresco_panel=" + refresco})
+revisar("reusar el refresco anterior -> 401", s == 401, (s, cuerpo.get("code")))
+
+s, cuerpo, _ = pedir("POST", "/admin/refrescar", {}, cabeceras={"Cookie": "refresco_panel=" + refresco2})
+revisar("la reutilización revoca la familia entera", s == 401, (s, cuerpo.get("code")))
+
+print("\n=== 4. Alta de catálogo desde el panel ===")
+sufijo = uuid.uuid4().hex[:6]
+
+s, marca, _ = pedir("POST", "/admin/marcas", {"nombre": "Marca Prueba " + sufijo}, token=token)
+revisar("crear marca -> 201", s == 201, (s, marca))
+revisar("el slug se deriva del nombre", marca and marca["slug"].startswith("marca-prueba-"), marca)
+
+s, cuerpo, _ = pedir("POST", "/admin/marcas", {"nombre": "Marca Prueba " + sufijo}, token=token)
+revisar("marca con nombre repetido -> 409 DUPLICATE_NAME",
+        s == 409 and cuerpo["code"] == "DUPLICATE_NAME", (s, cuerpo.get("code")))
+
+s, categoria, _ = pedir("POST", "/admin/categorias",
+                        {"nombre": "Categoría Prueba " + sufijo, "orden": 99}, token=token)
+revisar("crear categoría -> 201", s == 201, (s, categoria))
+
+s, subcategoria, _ = pedir("POST", "/admin/subcategorias",
+                           {"categoriaId": categoria["id"], "nombre": "Sub Prueba", "orden": 1}, token=token)
+revisar("crear subcategoría -> 201", s == 201, (s, subcategoria))
+revisar("el slug de la subcategoría incluye la categoría",
+        subcategoria and "categoria-prueba" in subcategoria["slug"], subcategoria)
+
+s, cuerpo, _ = pedir("POST", "/admin/subcategorias",
+                     {"categoriaId": categoria["id"], "nombre": "Sub Prueba", "orden": 2}, token=token)
+revisar("nombre repetido dentro de la categoría -> 409",
+        s == 409 and cuerpo["code"] == "DUPLICATE_NAME", (s, cuerpo.get("code")))
+
+# La misma prueba crea su propia pareja de categorías para comprobarlo: usar
+# una de la semilla haría que la segunda ejecución chocara con lo que dejó la
+# primera.
+s, otraCategoria, _ = pedir("POST", "/admin/categorias",
+                            {"nombre": "Categoría Gemela " + sufijo, "orden": 98}, token=token)
+s, otra, _ = pedir("POST", "/admin/subcategorias",
+                   {"categoriaId": otraCategoria["id"], "nombre": "Sub Prueba", "orden": 9}, token=token)
+revisar("el mismo nombre SÍ se admite en otra categoría", s == 201, (s, otra))
+
+print("\n=== 5. Producto ===")
+nuevo = {
+    "sku": "PRB-" + sufijo.upper(),
+    "nombre": "Producto de Prueba " + sufijo,
+    "descripcionCorta": "Creado por la prueba de humo.",
+    "descripcion": "Producto creado automáticamente para verificar el alta.",
+    "subcategoriaId": subcategoria["id"],
+    "marcaId": marca["id"],
+    "precio": 149.90,
+    "precioAnterior": 199.90,
+    "stock": 7,
+    "destacado": False,
+    "imagenIds": [],
+}
+s, producto, _ = pedir("POST", "/admin/productos", nuevo, token=token)
+revisar("crear producto -> 201", s == 201, (s, producto))
+revisar("nace inactivo", producto and producto["activo"] is False, producto)
+revisar("calcula el porcentaje de descuento", producto and producto["porcentajeDescuento"] == 25,
+        producto.get("porcentajeDescuento") if producto else None)
+revisar("el panel SÍ ve el SKU", producto and producto["sku"] == nuevo["sku"])
+revisar("registra quién lo creó", producto and producto["creadoPor"] == "admin",
+        producto.get("creadoPor") if producto else None)
+
+s, cuerpo, _ = pedir("POST", "/admin/productos", nuevo, token=token)
+revisar("SKU repetido -> 409 DUPLICATE_SKU",
+        s == 409 and cuerpo["code"] == "DUPLICATE_SKU", (s, cuerpo.get("code")))
+
+malo = dict(nuevo, sku="OTRO-" + sufijo.upper(), precio=200.00, precioAnterior=100.00)
+s, cuerpo, _ = pedir("POST", "/admin/productos", malo, token=token)
+revisar("precio anterior menor -> 422 INVALID_COMPARE_PRICE",
+        s == 422 and cuerpo["code"] == "INVALID_COMPARE_PRICE", (s, cuerpo.get("code")))
+
+s, cuerpo, _ = pedir("PATCH", "/admin/productos/%d/estado" % producto["id"], {"activo": True}, token=token)
+revisar("publicar sin imagen -> 422 PRODUCT_REQUIRES_IMAGE",
+        s == 422 and cuerpo["code"] == "PRODUCT_REQUIRES_IMAGE", (s, cuerpo.get("code")))
+
+s, cuerpo, _ = pedir("POST", "/admin/productos",
+                     dict(nuevo, sku="X-" + sufijo.upper(), precio=-5), token=token)
+revisar("precio negativo -> 400 VALIDATION_ERROR con el campo",
+        s == 400 and cuerpo["code"] == "VALIDATION_ERROR", (s, cuerpo.get("code")))
+
+print("\n=== 6. Subida de imagen ===")
+cuerpo_mp, tipo_mp = multipart({"textoAlt": "Imagen de prueba"},
+                              ("prueba.png", png(600, 400), "image/png"))
+s, archivo, _ = pedir("POST", "/admin/archivos", token=token, cuerpo_crudo=cuerpo_mp, tipo=tipo_mp)
+revisar("subir PNG -> 201", s == 201, (s, archivo))
+revisar("se convierte a WebP con 4 variantes",
+        archivo and set(archivo["urls"]) == {"MINIATURA", "TARJETA", "DETALLE", "ORIGINAL"},
+        archivo.get("urls") if archivo else None)
+revisar("no amplía: el original conserva 600 px",
+        archivo and archivo["ancho"] == 600, archivo.get("ancho") if archivo else None)
+
+s, repetido, _ = pedir("POST", "/admin/archivos", token=token, cuerpo_crudo=cuerpo_mp, tipo=tipo_mp)
+revisar("subir la misma imagen deduplica (mismo id)",
+        s == 201 and repetido["id"] == archivo["id"], (s, repetido.get("id"), archivo.get("id")))
+
+cuerpo_mp2, tipo_mp2 = multipart({"textoAlt": "Demasiado pequeña"},
+                                ("chica.png", png(50, 50), "image/png"))
+s, cuerpo, _ = pedir("POST", "/admin/archivos", token=token, cuerpo_crudo=cuerpo_mp2, tipo=tipo_mp2)
+revisar("imagen de 50x50 -> 422 IMAGE_TOO_SMALL",
+        s == 422 and cuerpo["code"] == "IMAGE_TOO_SMALL", (s, cuerpo.get("code")))
+
+cuerpo_mp3, tipo_mp3 = multipart({"textoAlt": "No es imagen"},
+                                ("falsa.png", b"esto no es una imagen, solo texto plano" * 3, "image/png"))
+s, cuerpo, _ = pedir("POST", "/admin/archivos", token=token, cuerpo_crudo=cuerpo_mp3, tipo=tipo_mp3)
+revisar("texto con extensión .png -> 422 UNSUPPORTED_IMAGE_TYPE (RN-070)",
+        s == 422 and cuerpo["code"] == "UNSUPPORTED_IMAGE_TYPE", (s, cuerpo.get("code")))
+
+print("\n=== 7. Publicar y ver en la tienda ===")
+s, actualizado, _ = pedir("PUT", "/admin/productos/%d" % producto["id"],
+                          dict(nuevo, imagenIds=[archivo["id"]]), token=token)
+revisar("asignar imagen al producto", s == 200 and len(actualizado["imagenes"]) == 1, (s, actualizado))
+
+s, publicado, _ = pedir("PATCH", "/admin/productos/%d/estado" % producto["id"], {"activo": True}, token=token)
+revisar("publicar con imagen -> 200 y activo", s == 200 and publicado["activo"] is True, (s, publicado))
+
+s, visto, _ = pedir("GET", "/productos/" + producto["slug"])
+revisar("ya se ve en la tienda", s == 200 and visto["slug"] == producto["slug"], s)
+
+s, _, _ = pedir("PATCH", "/admin/productos/%d/estado" % producto["id"], {"activo": False}, token=token)
+revisar("despublicar -> 200", s == 200, s)
+s, cuerpo, _ = pedir("GET", "/productos/" + producto["slug"])
+revisar("despublicado -> 404 en la tienda", s == 404, s)
+s, cuerpo, _ = pedir("GET", "/admin/productos/%d" % producto["id"], token=token)
+revisar("pero sigue existiendo en el panel", s == 200 and cuerpo["activo"] is False, (s, cuerpo))
+
+print("\n=== 8. Dependencias (RN-011) ===")
+s, _, _ = pedir("PATCH", "/admin/productos/%d/estado" % producto["id"], {"activo": True}, token=token)
+s, cuerpo, _ = pedir("PATCH", "/admin/subcategorias/%d/estado" % subcategoria["id"],
+                     {"activo": False}, token=token)
+revisar("desactivar subcategoría con productos activos -> 409 HAS_DEPENDENTS",
+        s == 409 and cuerpo["code"] == "HAS_DEPENDENTS", (s, cuerpo.get("code")))
+revisar("el error dice cuántos y cuáles bloquean",
+        cuerpo.get("totalBloqueantes") == 1 and len(cuerpo.get("bloqueantes", [])) == 1, cuerpo)
+
+s, cuerpo, _ = pedir("PATCH", "/admin/categorias/%d/estado" % categoria["id"], {"activo": False}, token=token)
+revisar("desactivar categoría con subcategorías activas -> 409",
+        s == 409 and cuerpo["code"] == "HAS_DEPENDENTS", (s, cuerpo.get("code")))
+
+print("\n=== 9. Carrito y cupones ===")
+s, carrito, _ = pedir("POST", "/carritos")
+revisar("crear carrito -> 201 con UUID", s == 201 and len(carrito["id"]) == 36, (s, carrito))
+idc = carrito["id"]
+
+s, carrito, _ = pedir("POST", "/carritos/%s/items" % idc, {"productoId": producto["id"], "cantidad": 2})
+revisar("agregar al carrito", s == 200 and carrito["totalUnidades"] == 2, (s, carrito))
+revisar("el subtotal lo calcula el servidor", carrito and carrito["subtotal"] == 299.80,
+        carrito.get("subtotal") if carrito else None)
+
+s, cuerpo, _ = pedir("POST", "/carritos/%s/items" % idc, {"productoId": producto["id"], "cantidad": 50})
+revisar("superar el stock acumulado -> 409 INSUFFICIENT_STOCK",
+        s == 409 and cuerpo["code"] == "INSUFFICIENT_STOCK", (s, cuerpo.get("code")))
+revisar("el error dice cuánto hay disponible", cuerpo.get("disponible") == 7, cuerpo)
+
+s, cuerpo, _ = pedir("POST", "/carritos/%s/cupon" % idc, {"codigo": "BIENVENIDA10"})
+revisar("aplicar cupón del 10%", s == 200 and cuerpo["descuento"] == 29.98, (s, cuerpo.get("descuento")))
+revisar("el total descuenta", cuerpo.get("total") == 269.82, cuerpo.get("total"))
+
+s, cuerpo, _ = pedir("POST", "/carritos/%s/cupon" % idc, {"codigo": "EXPIRADO"})
+revisar("cupón caducado -> 422 COUPON_NOT_APPLICABLE",
+        s == 422 and cuerpo["code"] == "COUPON_NOT_APPLICABLE", (s, cuerpo.get("code")))
+
+s, cuerpo, _ = pedir("POST", "/carritos/%s/cupon" % idc, {"codigo": "VERANO25"})
+revisar("cupón con mínimo no alcanzado -> 422 COUPON_MIN_NOT_MET",
+        s == 422 and cuerpo["code"] == "COUPON_MIN_NOT_MET", (s, cuerpo.get("code")))
+revisar("el error dice el subtotal actual y el mínimo",
+        cuerpo.get("subtotalActual") == 299.80 and cuerpo.get("subtotalMinimo") == 300.00, cuerpo)
+
+# El id 1 no es necesariamente un producto con stock: se busca uno que lo tenga.
+s, conStock, _ = pedir("GET", "/productos?conStock=true&precioMinimo=200&tamanoPagina=1")
+otroId = conStock["items"][0]["id"]
+s, cuerpo, _ = pedir("POST", "/carritos/%s/items" % idc, {"productoId": otroId, "cantidad": 1})
+revisar("agregar un segundo producto con stock", s == 200, (s, cuerpo))
+s, cuerpo, _ = pedir("GET", "/carritos/" + idc)
+revisar("el cupón sigue aplicado y ahora activo", cuerpo.get("cuponAplicado") == "BIENVENIDA10", cuerpo)
+
+s, cuerpo, _ = pedir("GET", "/carritos/" + str(uuid.uuid4()))
+revisar("carrito inexistente -> 404 CART_NOT_FOUND",
+        s == 404 and cuerpo["code"] == "CART_NOT_FOUND", (s, cuerpo.get("code")))
+
+print("\n=== 10. Permisos por rol ===")
+s, cuerpo, _ = pedir("POST", "/admin/administradores",
+                     {"usuario": "operador" + sufijo, "contrasena": "unaFraseLargaYSegura",
+                      "nombre": "Operador", "rol": "ADMINISTRADOR"}, token=token)
+revisar("superadministrador puede crear administradores", s == 201, (s, cuerpo))
+
+s, sesion3, _ = pedir("POST", "/admin/acceso",
+                      {"usuario": "operador" + sufijo, "contrasena": "unaFraseLargaYSegura"})
+revisar("el nuevo administrador puede entrar", s == 200, (s, sesion3))
+token_op = sesion3["tokenAcceso"] if s == 200 else None
+
+s, cuerpo, _ = pedir("GET", "/admin/administradores", token=token_op)
+revisar("un ADMINISTRADOR no lista administradores -> 403 FORBIDDEN",
+        s == 403 and cuerpo["code"] == "FORBIDDEN", (s, cuerpo.get("code")))
+
+s, cuerpo, _ = pedir("GET", "/admin/productos", token=token_op)
+revisar("pero sí gestiona catálogo", s == 200, s)
+
+s, cuerpo, _ = pedir("POST", "/admin/administradores",
+                     {"usuario": "corta" + sufijo, "contrasena": "corta", "nombre": "X"}, token=token)
+revisar("contraseña de menos de 10 caracteres -> 400",
+        s == 400 and cuerpo["code"] == "VALIDATION_ERROR", (s, cuerpo.get("code")))
+
+print("\n=== 11. CORS para el panel ===")
+
+
+def preflight(origen):
+    pet = urllib.request.Request(
+        BASE + "/admin/acceso",
+        method="OPTIONS",
+        headers={"Origin": origen, "Access-Control-Request-Method": "POST",
+                 "Access-Control-Request-Headers": "content-type"})
+    try:
+        with urllib.request.urlopen(pet) as r:
+            return r.status, dict(r.headers)
+    except urllib.error.HTTPError as e:
+        return e.code, dict(e.headers)
+
+
+s, cab = preflight("http://localhost:5173")
+revisar("preflight del panel -> 200", s == 200, s)
+revisar("permite el origen del panel",
+        cab.get("Access-Control-Allow-Origin") == "http://localhost:5173",
+        cab.get("Access-Control-Allow-Origin"))
+revisar("permite credenciales (cookie de refresco)",
+        cab.get("Access-Control-Allow-Credentials") == "true",
+        cab.get("Access-Control-Allow-Credentials"))
+revisar("expone X-Correlation-Id al JavaScript",
+        "X-Correlation-Id" in (cab.get("Access-Control-Expose-Headers") or ""),
+        cab.get("Access-Control-Expose-Headers"))
+
+s, _ = preflight("http://origen.no.autorizado")
+revisar("un origen desconocido se rechaza", s == 403, s)
+
+print("\n=== 12. Órdenes ===")
+s, listado, _ = pedir("GET", "/admin/ordenes?tamanoPagina=5", token=token)
+revisar("listado de órdenes", s == 200 and listado["totalItems"] > 0,
+        (s, listado.get("totalItems")))
+revisar("ordenadas de la más reciente a la más antigua",
+        listado["items"][0]["creadoEn"] >= listado["items"][-1]["creadoEn"])
+
+s, pendientes, _ = pedir("GET", "/admin/ordenes?estado=PENDIENTE", token=token)
+revisar("filtro por estado", s == 200 and all(o["estado"] == "PENDIENTE" for o in pendientes["items"]),
+        s)
+
+idOrden = pendientes["items"][0]["id"]
+s, detalle, _ = pedir("GET", "/admin/ordenes/%d" % idOrden, token=token)
+revisar("detalle con líneas", s == 200 and len(detalle["items"]) > 0, s)
+revisar("las líneas copian nombre, sku y precio",
+        {"nombreProducto", "sku", "precioUnitario"} <= set(detalle["items"][0]))
+revisar("los importes cuadran con las líneas",
+        abs(sum(l["totalLinea"] for l in detalle["items"]) - detalle["subtotal"]) < 0.01,
+        (detalle["subtotal"], [l["totalLinea"] for l in detalle["items"]]))
+revisar("una pendiente solo puede pagarse o cancelarse",
+        sorted(detalle["transicionesPermitidas"]) == ["CANCELADA", "PAGADA"],
+        detalle["transicionesPermitidas"])
+
+# Desde la orden se llega al cliente y al chat: sin el id, el panel solo puede
+# enseñar un nombre escrito a mano en el pedido.
+revisar("la orden dice quién la hizo",
+        detalle["clienteId"] is not None and detalle["clienteNombre"], detalle.get("clienteNombre"))
+revisar("y si ya hay un hilo sobre ella, cuál es",
+        "conversacionId" in detalle, sorted(detalle))
+
+s, hilo, _ = pedir("POST", "/admin/conversaciones",
+                   {"clienteId": detalle["clienteId"], "ordenId": idOrden,
+                    "asunto": "Sobre la orden " + detalle["numero"],
+                    "mensaje": "Hola, te escribo por tu pedido."}, token=token)
+revisar("abrir una conversación desde la orden", s == 201, (s, hilo))
+s, detalle2, _ = pedir("GET", "/admin/ordenes/%d" % idOrden, token=token)
+revisar("y la orden ya apunta a ese hilo",
+        detalle2["conversacionId"] == hilo["conversacion"]["id"],
+        (detalle2.get("conversacionId"), hilo["conversacion"]["id"]))
+
+s, cuerpo, _ = pedir("PATCH", "/admin/ordenes/%d/estado" % idOrden, {"estado": "ENTREGADA"}, token=token)
+revisar("saltarse un paso -> 422 INVALID_ORDER_TRANSITION",
+        s == 422 and cuerpo["code"] == "INVALID_ORDER_TRANSITION", (s, cuerpo.get("code")))
+revisar("el error dice el estado actual y a dónde sí se puede ir",
+        cuerpo.get("estadoActual") == "PENDIENTE" and "PAGADA" in cuerpo.get("transicionesPermitidas", []),
+        cuerpo)
+
+s, pagada, _ = pedir("PATCH", "/admin/ordenes/%d/estado" % idOrden, {"estado": "PAGADA"}, token=token)
+revisar("pendiente -> pagada", s == 200 and pagada["estado"] == "PAGADA", (s, pagada))
+revisar("registra quién la movió", pagada.get("actualizadoPor") == "admin", pagada.get("actualizadoPor"))
+
+# Cancelar devuelve el stock: se compara el del producto antes y después.
+idProducto = detalle["items"][0]["productoId"]
+cantidad = detalle["items"][0]["cantidad"]
+s, antes, _ = pedir("GET", "/admin/productos/%d" % idProducto, token=token)
+s, cancelada, _ = pedir("PATCH", "/admin/ordenes/%d/estado" % idOrden, {"estado": "CANCELADA"}, token=token)
+revisar("pagada -> cancelada", s == 200 and cancelada["estado"] == "CANCELADA", s)
+s, despues, _ = pedir("GET", "/admin/productos/%d" % idProducto, token=token)
+revisar("cancelar devuelve el stock (RN-055)",
+        despues["stock"] == antes["stock"] + cantidad,
+        (antes["stock"], cantidad, despues["stock"]))
+
+s, cuerpo, _ = pedir("PATCH", "/admin/ordenes/%d/estado" % idOrden, {"estado": "PAGADA"}, token=token)
+revisar("una cancelada ya no revive -> 422", s == 422, (s, cuerpo.get("code")))
+
+print("\n=== 13. Vistas de producto ===")
+s, ficha, _ = pedir("GET", "/productos/audifonos-bluetooth-pulse-x")
+s, antesVistas, _ = pedir("GET", "/admin/productos?texto=TEC-AUD-001", token=token)
+vistasAntes = antesVistas["items"][0]["vistas"]
+pedir("GET", "/productos/audifonos-bluetooth-pulse-x")
+pedir("GET", "/productos/audifonos-bluetooth-pulse-x")
+s, despuesVistas, _ = pedir("GET", "/admin/productos?texto=TEC-AUD-001", token=token)
+revisar("abrir la ficha en la tienda suma vistas",
+        despuesVistas["items"][0]["vistas"] == vistasAntes + 2,
+        (vistasAntes, despuesVistas["items"][0]["vistas"]))
+revisar("la tienda NO expone el contador", "vistas" not in ficha, list(ficha)[:12])
+
+print("\n=== 14. Tablero ===")
+s, m, _ = pedir("GET", "/admin/metricas", token=token)
+revisar("métricas en una sola petición", s == 200, s)
+revisar("trae las seis secciones",
+        {"resumen", "ventasPorDia", "ordenesPorEstado", "masVistos", "masVendidos", "stockBajo"} <= set(m))
+revisar("la serie de ventas es densa: 31 días seguidos",
+        len(m["ventasPorDia"]) == 31, len(m["ventasPorDia"]))
+fechas = [p["fecha"] for p in m["ventasPorDia"]]
+revisar("sin huecos ni repeticiones en las fechas", len(set(fechas)) == 31)
+revisar("incluye los cinco estados aunque alguno esté vacío",
+        len(m["ordenesPorEstado"]) == 5, len(m["ordenesPorEstado"]))
+revisar("el resumen cuadra con la serie",
+        abs(sum(p["total"] for p in m["ventasPorDia"]) - m["resumen"]["ventas30Dias"]) < 0.01,
+        (sum(p["total"] for p in m["ventasPorDia"]), m["resumen"]["ventas30Dias"]))
+revisar("las ventas excluyen las canceladas",
+        m["resumen"]["ventas30Dias"] > 0 and m["resumen"]["ordenes30Dias"] > 0, m["resumen"])
+revisar("hay productos más vistos, con su imagen",
+        len(m["masVistos"]) > 0 and m["masVistos"][0]["vistas"] > 0, m["masVistos"][:1])
+revisar("los más vistos vienen de mayor a menor",
+        all(a["vistas"] >= b["vistas"] for a, b in zip(m["masVistos"], m["masVistos"][1:])))
+revisar("stock bajo solo lista productos con menos de 10",
+        all(p["stock"] < 10 for p in m["stockBajo"]), m["stockBajo"])
+
+s, cuerpo, _ = pedir("GET", "/admin/metricas")
+revisar("el tablero exige sesión -> 401", s == 401, s)
+
+print("\n=== 15. Eliminar no es despublicar (RN-086) ===")
+s, _, _ = pedir("DELETE", "/admin/productos/%d" % producto["id"], token=token)
+revisar("DELETE -> 204", s == 204, s)
+s, cuerpo, _ = pedir("GET", "/admin/productos/%d" % producto["id"], token=token)
+revisar("ya no aparece en el panel", s == 404, s)
+s, cuerpo, _ = pedir("GET", "/productos/" + producto["slug"])
+revisar("ni en la tienda", s == 404, s)
+
+s, papelera, _ = pedir("GET", "/admin/papelera", token=token)
+fila = next((e for e in papelera if e["tipo"] == "producto" and e["id"] == producto["id"]), None)
+revisar("sigue en la papelera, no se perdió", fila is not None,
+        [e["nombre"] for e in papelera[:5]])
+revisar("y consta quién lo eliminó", fila and fila["eliminadoPor"] == "admin", fila)
+
+print("\n" + "=" * 60)
+print("PASAN %d   FALLAN %d" % (ok, len(fallos)))
+for f in fallos:
+    print("  - " + f)
+sys.exit(1 if fallos else 0)

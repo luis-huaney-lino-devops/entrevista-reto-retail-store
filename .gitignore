@@ -1,0 +1,25 @@
+# Java
+target/
+*.class
+# .NET
+bin/
+obj/
+# Node
+node_modules/
+.next/
+dist/
+# Entorno / IDE
+.env
+.env.*
+!.env.example
+.idea/
+.vscode/
+*.iml
+.DS_Store
+
+# Python de las pruebas de humo
+__pycache__/
+*.pyc
+
+# Registros locales
+*.log

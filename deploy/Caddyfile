@@ -1,0 +1,19 @@
+# Reemplaza los dominios y ejecuta `caddy fmt` si los editas a mano.
+# Caddy emite certificados Let's Encrypt automáticamente al primer arranque.
+
+tienda.tudominio.com {
+    reverse_proxy storefront:3000
+    encode gzip
+}
+
+api.tudominio.com {
+    reverse_proxy api-java:8080
+    encode gzip
+}
+
+# El admin (Fase 6) se agrega cuando exista:
+# admin.tudominio.com {
+#     root * /srv/admin
+#     file_server
+#     try_files {path} /index.html
+# }

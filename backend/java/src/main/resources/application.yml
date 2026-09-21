@@ -1,0 +1,72 @@
+spring:
+  application:
+    name: retail-store-api
+  datasource:
+    url: ${DB_URL:jdbc:postgresql://localhost:5433/retailstore_java}
+    username: ${DB_USER:retail}
+    password: ${DB_PASSWORD:retail}
+  jpa:
+    open-in-view: false
+    hibernate:
+      ddl-auto: validate   # el esquema lo gobierna Flyway; Hibernate solo verifica el mapeo
+    properties:
+      hibernate:
+        jdbc:
+          time_zone: UTC
+  flyway:
+    locations: classpath:db/migration
+  mvc:
+    problemdetails:
+      enabled: true
+  servlet:
+    multipart:
+      # Tope duro de la subida. El límite de negocio (RN-071) lo aplica
+      # ServicioArchivo; este es el cortafuegos del contenedor, para que un
+      # archivo de 2 GB no se materialice antes de llegar al servicio.
+      max-file-size: ${SUBIDA_MAX_ARCHIVO:12MB}
+      max-request-size: ${SUBIDA_MAX_PETICION:15MB}
+
+server:
+  port: ${PORT:8080}
+  forward-headers-strategy: framework   # detrás de Caddy
+  error:
+    include-stacktrace: never
+    include-message: never
+
+management:
+  endpoints:
+    web:
+      base-path: /          # expone /health en la raiz del actuator
+      exposure:
+        include: health
+
+springdoc:
+  swagger-ui:
+    path: /swagger
+  api-docs:
+    path: /v3/api-docs
+
+app:
+  cors:
+    origenes-permitidos: ${CORS_ALLOWED_ORIGINS:http://localhost:3000,http://localhost:5173}
+  jwt:
+    # En producción es obligatorio: sin él la aplicación arranca con la clave de
+    # desarrollo y cualquiera que lea este archivo puede firmar tokens.
+    secreto: ${JWT_SECRETO:desarrollo-local-no-usar-en-produccion-32b}
+    emisor: retail-store
+    vigencia-acceso: PT15M
+    vigencia-refresco-panel: PT12H
+    cookie-segura: ${JWT_COOKIE_SEGURA:false}
+  almacen:
+    # Dónde acaban las imágenes. 'local' escribe en disco y sirve desde la
+    # propia API: vale para desarrollo y no necesita cuenta de Cloudflare.
+    # 'r2' usa el protocolo de S3 (ADR-0009).
+    tipo: ${ALMACEN_TIPO:local}
+    directorio-local: ${ALMACEN_DIRECTORIO:./datos/archivos}
+    url-publica-base: ${ALMACEN_URL_PUBLICA:http://localhost:8080/archivos}
+    r2:
+      endpoint: ${R2_ENDPOINT:}
+      bucket: ${R2_BUCKET:}
+      clave-acceso: ${R2_ACCESS_KEY_ID:}
+      clave-secreta: ${R2_SECRET_ACCESS_KEY:}
+      region: ${R2_REGION:auto}

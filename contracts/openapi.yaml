@@ -1,0 +1,3442 @@
+# ============================================================================
+# GENERADO. No se edita a mano.
+#
+# Sale de la propia aplicación, con springdoc, a partir de los controladores y
+# sus anotaciones de validación. Para regenerarlo:
+#
+#     cd backend/java && mvn spring-boot:run
+#     curl -s http://localhost:8080/v3/api-docs.yaml -o ../../contracts/openapi.yaml
+#
+# Por qué generado y no escrito a mano: la versión anterior se escribió antes
+# que el código y quedó desfasada en tres cosas a la vez (idioma, categorías de
+# un nivel, endpoints inexistentes). Un contrato que miente es peor que no
+# tenerlo, porque quien lo lee le cree.
+#
+# El diseño -qué endpoints existen y por qué- vive en docs/, que es donde se
+# discute. Esto es el reflejo de lo que hay.
+# ============================================================================
+openapi: 3.1.0
+openapi: 3.1.0
+info:
+  title: Retail Store API
+  description: |-
+    API REST del e-commerce Retail Store.
+
+    Los errores siguen RFC 9457 (application/problem+json) con las extensiones code y correlationId. El cliente se ramifica por code, nunca por detail.
+  version: v1
+servers:
+- url: http://localhost:8080
+  description: Generated server url
+paths:
+  /api/v1/admin/subcategorias/{id}:
+    get:
+      tags:
+      - Subcategorías (panel)
+      summary: Detalle de una subcategoría
+      operationId: porId
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: integer
+          format: int64
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/SubcategoriaRespuesta"
+      security:
+      - tokenPanel: []
+    put:
+      tags:
+      - Subcategorías (panel)
+      summary: Actualizar una subcategoría; admite moverla de categoría
+      operationId: actualizar
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: integer
+          format: int64
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ActualizarSubcategoriaPeticion"
+        required: true
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/SubcategoriaRespuesta"
+      security:
+      - tokenPanel: []
+    delete:
+      tags:
+      - Subcategorías (panel)
+      summary: "Eliminación lógica: la fila se conserva con quién y cuándo"
+      operationId: eliminar
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: integer
+          format: int64
+      responses:
+        "204":
+          description: No Content
+      security:
+      - tokenPanel: []
+  /api/v1/admin/productos/{id}:
+    get:
+      tags:
+      - Productos (panel)
+      summary: Detalle de un producto por id
+      operationId: porId_1
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: integer
+          format: int64
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/ProductoAdminRespuesta"
+      security:
+      - tokenPanel: []
+    put:
+      tags:
+      - Productos (panel)
+      summary: Actualizar un producto. El SKU no se puede cambiar
+      operationId: actualizar_1
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: integer
+          format: int64
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ActualizarProductoPeticion"
+        required: true
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/ProductoAdminRespuesta"
+      security:
+      - tokenPanel: []
+    delete:
+      tags:
+      - Productos (panel)
+      summary: "Eliminación lógica: sale del catálogo y del panel, pero la fila se\
+        \ conserva"
+      operationId: eliminar_1
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: integer
+          format: int64
+      responses:
+        "204":
+          description: No Content
+      security:
+      - tokenPanel: []
+  /api/v1/admin/marcas/{id}:
+    get:
+      tags:
+      - Marcas (panel)
+      summary: Detalle de una marca
+      operationId: porId_2
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: integer
+          format: int64
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/MarcaRespuesta"
+      security:
+      - tokenPanel: []
+    put:
+      tags:
+      - Marcas (panel)
+      summary: Actualizar una marca
+      operationId: actualizar_2
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: integer
+          format: int64
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ActualizarMarcaPeticion"
+        required: true
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/MarcaRespuesta"
+      security:
+      - tokenPanel: []
+    delete:
+      tags:
+      - Marcas (panel)
+      summary: "Eliminación lógica: la fila se conserva con quién y cuándo"
+      operationId: eliminar_2
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: integer
+          format: int64
+      responses:
+        "204":
+          description: No Content
+      security:
+      - tokenPanel: []
+  /api/v1/admin/cupones/{id}:
+    get:
+      tags:
+      - Cupones (panel)
+      summary: Detalle de un cupón
+      operationId: porId_3
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: integer
+          format: int64
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/CuponRespuesta"
+      security:
+      - tokenPanel: []
+    put:
+      tags:
+      - Cupones (panel)
+      summary: Actualizar un cupón. El código no cambia
+      operationId: actualizar_3
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: integer
+          format: int64
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CuponPeticion"
+        required: true
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/CuponRespuesta"
+      security:
+      - tokenPanel: []
+    delete:
+      tags:
+      - Cupones (panel)
+      summary: "Eliminación lógica. El código no se libera: aparece en órdenes pasadas"
+      operationId: eliminar_3
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: integer
+          format: int64
+      responses:
+        "204":
+          description: No Content
+      security:
+      - tokenPanel: []
+  /api/v1/admin/categorias/{id}:
+    get:
+      tags:
+      - Categorías (panel)
+      summary: "Detalle de una categoría, con sus subcategorías"
+      operationId: porId_4
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: integer
+          format: int64
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/CategoriaRespuesta"
+      security:
+      - tokenPanel: []
+    put:
+      tags:
+      - Categorías (panel)
+      summary: Actualizar una categoría
+      operationId: actualizar_4
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: integer
+          format: int64
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ActualizarCategoriaPeticion"
+        required: true
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/CategoriaRespuesta"
+      security:
+      - tokenPanel: []
+    delete:
+      tags:
+      - Categorías (panel)
+      summary: "Eliminación lógica: la fila se conserva con quién y cuándo"
+      operationId: eliminar_4
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: integer
+          format: int64
+      responses:
+        "204":
+          description: No Content
+      security:
+      - tokenPanel: []
+  /api/v1/admin/administradores/{id}:
+    put:
+      tags:
+      - Administradores
+      summary: "Actualizar nombre, rol y estado"
+      operationId: actualizar_5
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: integer
+          format: int64
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ActualizarAdministradorPeticion"
+        required: true
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/AdministradorRespuesta"
+      security:
+      - tokenPanel: []
+  /api/v1/conversaciones/{token}/mensajes:
+    post:
+      tags:
+      - Chat (tienda)
+      summary: Escribir como cliente
+      operationId: escribir
+      parameters:
+      - name: token
+        in: path
+        required: true
+        schema:
+          type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/EnviarMensajePeticion"
+        required: true
+      responses:
+        "201":
+          description: Created
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/MensajeRespuesta"
+  /api/v1/conversaciones/{token}/adjuntos:
+    post:
+      tags:
+      - Chat (tienda)
+      summary: "Adjuntar imagen o PDF. Se valida el contenido, no la extensión"
+      operationId: subirAdjunto
+      parameters:
+      - name: token
+        in: path
+        required: true
+        schema:
+          type: string
+      requestBody:
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                archivo:
+                  type: string
+                  format: binary
+              required:
+              - archivo
+      responses:
+        "201":
+          description: Created
+          content:
+            '*/*':
+              schema:
+                type: object
+                additionalProperties: {}
+  /api/v1/carritos:
+    post:
+      tags:
+      - Carrito
+      summary: Crear un carrito vacío
+      operationId: crear
+      responses:
+        "201":
+          description: Created
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/CarritoRespuesta"
+  /api/v1/carritos/{id}/items:
+    post:
+      tags:
+      - Carrito
+      summary: Agregar un producto o sumar a la línea existente
+      operationId: agregarItem
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AgregarItemPeticion"
+        required: true
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/CarritoRespuesta"
+  /api/v1/carritos/{id}/cupon:
+    post:
+      tags:
+      - Carrito
+      summary: Aplicar un cupón. Un carrito admite como mucho uno
+      operationId: aplicarCupon
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AplicarCuponPeticion"
+        required: true
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/CarritoRespuesta"
+    delete:
+      tags:
+      - Carrito
+      summary: Quitar el cupón
+      operationId: quitarCupon
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/CarritoRespuesta"
+  /api/v1/admin/subcategorias:
+    get:
+      tags:
+      - Subcategorías (panel)
+      summary: Listado de subcategorías de toda la tienda
+      operationId: listar
+      parameters:
+      - name: pagina
+        in: query
+        required: false
+        schema:
+          type: integer
+          format: int32
+          default: 1
+          minimum: 1
+      - name: tamanoPagina
+        in: query
+        required: false
+        schema:
+          type: integer
+          format: int32
+          default: 50
+          maximum: 200
+          minimum: 1
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/RespuestaPaginaSubcategoriaRespuesta"
+      security:
+      - tokenPanel: []
+    post:
+      tags:
+      - Subcategorías (panel)
+      summary: Crear una subcategoría dentro de una categoría
+      operationId: crear_1
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CrearSubcategoriaPeticion"
+        required: true
+      responses:
+        "201":
+          description: Created
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/SubcategoriaRespuesta"
+      security:
+      - tokenPanel: []
+  /api/v1/admin/salir:
+    post:
+      tags:
+      - Acceso al panel
+      summary: Cerrar la sesión y revocar el refresco
+      operationId: salir
+      parameters:
+      - name: refresco_panel
+        in: cookie
+        required: false
+        schema:
+          type: string
+      responses:
+        "200":
+          description: OK
+  /api/v1/admin/refrescar:
+    post:
+      tags:
+      - Acceso al panel
+      summary: Renovar el token de acceso con la cookie de refresco
+      operationId: refrescar
+      parameters:
+      - name: refresco_panel
+        in: cookie
+        required: false
+        schema:
+          type: string
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/SesionRespuesta"
+  /api/v1/admin/productos:
+    get:
+      tags:
+      - Productos (panel)
+      summary: Listado con búsqueda por nombre o SKU y filtro por estado
+      operationId: listar_1
+      parameters:
+      - name: texto
+        in: query
+        required: false
+        schema:
+          type: string
+      - name: categoria
+        in: query
+        required: false
+        schema:
+          type: string
+      - name: subcategoria
+        in: query
+        required: false
+        schema:
+          type: string
+      - name: marca
+        in: query
+        required: false
+        schema:
+          type: string
+      - name: precioMinimo
+        in: query
+        required: false
+        schema:
+          type: number
+      - name: precioMaximo
+        in: query
+        required: false
+        schema:
+          type: number
+      - name: conStock
+        in: query
+        required: false
+        schema:
+          type: boolean
+      - name: destacado
+        in: query
+        required: false
+        schema:
+          type: boolean
+      - name: orden
+        in: query
+        required: false
+        schema:
+          type: string
+      - name: pagina
+        in: query
+        required: false
+        schema:
+          type: integer
+          format: int32
+          minimum: 1
+      - name: tamanoPagina
+        in: query
+        required: false
+        schema:
+          type: integer
+          format: int32
+          maximum: 48
+          minimum: 1
+      - name: activo
+        in: query
+        required: false
+        schema:
+          type: boolean
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/RespuestaPaginaProductoAdminRespuesta"
+      security:
+      - tokenPanel: []
+    post:
+      tags:
+      - Productos (panel)
+      summary: "Crear un producto. Nace inactivo: publicar es un PATCH aparte"
+      operationId: crear_2
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CrearProductoPeticion"
+        required: true
+      responses:
+        "201":
+          description: Created
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/ProductoAdminRespuesta"
+      security:
+      - tokenPanel: []
+  /api/v1/admin/papelera/restaurar:
+    post:
+      tags:
+      - Papelera (panel)
+      summary: "Recuperar un elemento. Vuelve desactivado, no se publica solo"
+      operationId: restaurar
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RestaurarPeticion"
+        required: true
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/ElementoEliminado"
+      security:
+      - tokenPanel: []
+  /api/v1/admin/notificaciones/{id}/leida:
+    post:
+      tags:
+      - Notificaciones (panel)
+      summary: Marcar una como leída
+      operationId: marcarLeida
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: integer
+          format: int64
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                type: object
+                additionalProperties:
+                  type: integer
+                  format: int64
+      security:
+      - tokenPanel: []
+  /api/v1/admin/notificaciones/leidas:
+    post:
+      tags:
+      - Notificaciones (panel)
+      summary: Marcar todas como leídas
+      operationId: marcarTodas
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                type: object
+                additionalProperties:
+                  type: integer
+                  format: int64
+      security:
+      - tokenPanel: []
+  /api/v1/admin/marcas:
+    get:
+      tags:
+      - Marcas (panel)
+      summary: "Listado de marcas, activas e inactivas"
+      operationId: listar_2
+      parameters:
+      - name: texto
+        in: query
+        required: false
+        schema:
+          type: string
+      - name: pagina
+        in: query
+        required: false
+        schema:
+          type: integer
+          format: int32
+          default: 1
+          minimum: 1
+      - name: tamanoPagina
+        in: query
+        required: false
+        schema:
+          type: integer
+          format: int32
+          default: 20
+          maximum: 100
+          minimum: 1
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/RespuestaPaginaMarcaRespuesta"
+      security:
+      - tokenPanel: []
+    post:
+      tags:
+      - Marcas (panel)
+      summary: Crear una marca
+      operationId: crear_3
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CrearMarcaPeticion"
+        required: true
+      responses:
+        "201":
+          description: Created
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/MarcaRespuesta"
+      security:
+      - tokenPanel: []
+  /api/v1/admin/cupones:
+    get:
+      tags:
+      - Cupones (panel)
+      summary: Listado de cupones
+      operationId: listar_3
+      parameters:
+      - name: pagina
+        in: query
+        required: false
+        schema:
+          type: integer
+          format: int32
+          default: 1
+          minimum: 1
+      - name: tamanoPagina
+        in: query
+        required: false
+        schema:
+          type: integer
+          format: int32
+          default: 20
+          maximum: 100
+          minimum: 1
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/RespuestaPaginaCuponRespuesta"
+      security:
+      - tokenPanel: []
+    post:
+      tags:
+      - Cupones (panel)
+      summary: Crear un cupón
+      operationId: crear_4
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CuponPeticion"
+        required: true
+      responses:
+        "201":
+          description: Created
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/CuponRespuesta"
+      security:
+      - tokenPanel: []
+  /api/v1/admin/conversaciones:
+    get:
+      tags:
+      - Chat (panel)
+      summary: "Bandeja de conversaciones, la más activa primero"
+      operationId: listar_4
+      parameters:
+      - name: estado
+        in: query
+        required: false
+        schema:
+          type: string
+      - name: pagina
+        in: query
+        required: false
+        schema:
+          type: integer
+          format: int32
+          default: 1
+          minimum: 1
+      - name: tamanoPagina
+        in: query
+        required: false
+        schema:
+          type: integer
+          format: int32
+          default: 20
+          maximum: 100
+          minimum: 1
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/RespuestaPaginaConversacionResumenRespuesta"
+      security:
+      - tokenPanel: []
+    post:
+      tags:
+      - Chat (panel)
+      summary: Empezar una conversación con un cliente
+      operationId: crear_5
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AbrirConversacionPeticion"
+        required: true
+      responses:
+        "201":
+          description: Created
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/ConversacionDetalleRespuesta"
+      security:
+      - tokenPanel: []
+  /api/v1/admin/conversaciones/{id}/mensajes:
+    post:
+      tags:
+      - Chat (panel)
+      summary: Responder. También se puede por WebSocket; el camino interno es el
+        mismo
+      operationId: responder
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: integer
+          format: int64
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/EnviarMensajePeticion"
+        required: true
+      responses:
+        "201":
+          description: Created
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/MensajeRespuesta"
+      security:
+      - tokenPanel: []
+  /api/v1/admin/conversaciones/ticket-ws:
+    post:
+      tags:
+      - Chat (panel)
+      summary: Ticket de un solo uso para conectar el WebSocket
+      operationId: ticket
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                type: object
+                additionalProperties: {}
+      security:
+      - tokenPanel: []
+  /api/v1/admin/conversaciones/adjuntos:
+    post:
+      tags:
+      - Chat (panel)
+      summary: "Subir un adjunto. Solo imagen o PDF, y el PDF se revisa antes"
+      operationId: subirAdjunto_1
+      requestBody:
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                archivo:
+                  type: string
+                  format: binary
+              required:
+              - archivo
+      responses:
+        "201":
+          description: Created
+          content:
+            '*/*':
+              schema:
+                type: object
+                additionalProperties: {}
+      security:
+      - tokenPanel: []
+  /api/v1/admin/categorias:
+    get:
+      tags:
+      - Categorías (panel)
+      summary: Listado de categorías
+      operationId: listar_5
+      parameters:
+      - name: pagina
+        in: query
+        required: false
+        schema:
+          type: integer
+          format: int32
+          default: 1
+          minimum: 1
+      - name: tamanoPagina
+        in: query
+        required: false
+        schema:
+          type: integer
+          format: int32
+          default: 50
+          maximum: 100
+          minimum: 1
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/RespuestaPaginaCategoriaRespuesta"
+      security:
+      - tokenPanel: []
+    post:
+      tags:
+      - Categorías (panel)
+      summary: Crear una categoría
+      operationId: crear_6
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CrearCategoriaPeticion"
+        required: true
+      responses:
+        "201":
+          description: Created
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/CategoriaRespuesta"
+      security:
+      - tokenPanel: []
+  /api/v1/admin/archivos:
+    get:
+      tags:
+      - Archivos
+      summary: "Listado de archivos, del más reciente al más antiguo"
+      operationId: listar_6
+      parameters:
+      - name: pagina
+        in: query
+        required: false
+        schema:
+          type: integer
+          format: int32
+          default: 1
+          minimum: 1
+      - name: tamanoPagina
+        in: query
+        required: false
+        schema:
+          type: integer
+          format: int32
+          default: 24
+          maximum: 100
+          minimum: 1
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/RespuestaPaginaArchivoRespuesta"
+      security:
+      - tokenPanel: []
+    post:
+      tags:
+      - Archivos
+      summary: "Subir una imagen: se convierte a WebP y se generan cuatro tamaños"
+      operationId: subir
+      parameters:
+      - name: textoAlt
+        in: query
+        required: true
+        schema:
+          type: string
+      requestBody:
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                archivo:
+                  type: string
+                  format: binary
+              required:
+              - archivo
+      responses:
+        "201":
+          description: Created
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/ArchivoRespuesta"
+      security:
+      - tokenPanel: []
+  /api/v1/admin/administradores:
+    get:
+      tags:
+      - Administradores
+      summary: Listado de administradores
+      operationId: listar_7
+      parameters:
+      - name: pagina
+        in: query
+        required: false
+        schema:
+          type: integer
+          format: int32
+          default: 1
+          minimum: 1
+      - name: tamanoPagina
+        in: query
+        required: false
+        schema:
+          type: integer
+          format: int32
+          default: 20
+          maximum: 100
+          minimum: 1
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/RespuestaPaginaAdministradorRespuesta"
+      security:
+      - tokenPanel: []
+    post:
+      tags:
+      - Administradores
+      summary: Crear un administrador
+      operationId: crear_7
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CrearAdministradorPeticion"
+        required: true
+      responses:
+        "201":
+          description: Created
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/AdministradorRespuesta"
+      security:
+      - tokenPanel: []
+  /api/v1/admin/administradores/{id}/contrasena:
+    post:
+      tags:
+      - Administradores
+      summary: Restablecer la contraseña de otro administrador
+      operationId: restablecerContrasena
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: integer
+          format: int64
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RestablecerContrasenaPeticion"
+        required: true
+      responses:
+        "204":
+          description: No Content
+      security:
+      - tokenPanel: []
+  /api/v1/admin/administradores/yo/contrasena:
+    post:
+      tags:
+      - Administradores
+      summary: Cambiar mi propia contraseña
+      operationId: cambiarMiContrasena
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CambiarContrasenaPeticion"
+        required: true
+      responses:
+        "204":
+          description: No Content
+      security:
+      - tokenPanel: []
+  /api/v1/admin/acceso:
+    post:
+      tags:
+      - Acceso al panel
+      summary: Entrar al panel con usuario y contraseña
+      operationId: acceder
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AccesoPeticion"
+        required: true
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/SesionRespuesta"
+  /api/v1/carritos/{id}/items/{idItem}:
+    delete:
+      tags:
+      - Carrito
+      summary: Quitar una línea
+      operationId: eliminarItem
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      - name: idItem
+        in: path
+        required: true
+        schema:
+          type: integer
+          format: int64
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/CarritoRespuesta"
+    patch:
+      tags:
+      - Carrito
+      summary: Cambiar la cantidad de una línea
+      operationId: cambiarCantidad
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      - name: idItem
+        in: path
+        required: true
+        schema:
+          type: integer
+          format: int64
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CambiarCantidadPeticion"
+        required: true
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/CarritoRespuesta"
+  /api/v1/admin/subcategorias/{id}/estado:
+    patch:
+      tags:
+      - Subcategorías (panel)
+      summary: Activar o desactivar; falla si tiene productos activos
+      operationId: cambiarEstado
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: integer
+          format: int64
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CambiarEstadoPeticion"
+        required: true
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/SubcategoriaRespuesta"
+      security:
+      - tokenPanel: []
+  /api/v1/admin/productos/{id}/estado:
+    patch:
+      tags:
+      - Productos (panel)
+      summary: Publicar o despublicar. Publicar exige al menos una imagen
+      operationId: cambiarEstado_1
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: integer
+          format: int64
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CambiarEstadoPeticion"
+        required: true
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/ProductoAdminRespuesta"
+      security:
+      - tokenPanel: []
+  /api/v1/admin/ordenes/{id}/estado:
+    patch:
+      tags:
+      - Órdenes (panel)
+      summary: Mover la orden de estado. Cancelar devuelve el stock
+      operationId: cambiarEstado_2
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: integer
+          format: int64
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CambiarEstadoOrdenPeticion"
+        required: true
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/OrdenDetalleRespuesta"
+      security:
+      - tokenPanel: []
+  /api/v1/admin/marcas/{id}/estado:
+    patch:
+      tags:
+      - Marcas (panel)
+      summary: Activar o desactivar
+      operationId: cambiarEstado_3
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: integer
+          format: int64
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CambiarEstadoPeticion"
+        required: true
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/MarcaRespuesta"
+      security:
+      - tokenPanel: []
+  /api/v1/admin/conversaciones/{id}/estado:
+    patch:
+      tags:
+      - Chat (panel)
+      summary: Cerrar o reabrir la conversación
+      operationId: cambiarEstado_4
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: integer
+          format: int64
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CambiarEstadoPeticion"
+        required: true
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/ConversacionDetalleRespuesta"
+      security:
+      - tokenPanel: []
+  /api/v1/admin/clientes/{id}/estado:
+    patch:
+      tags:
+      - Clientes (panel)
+      summary: Activar o desactivar. Un cliente desactivado no puede entrar
+      operationId: cambiarEstado_5
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: integer
+          format: int64
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CambiarEstadoPeticion"
+        required: true
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/ClienteRespuesta"
+      security:
+      - tokenPanel: []
+  /api/v1/admin/categorias/{id}/estado:
+    patch:
+      tags:
+      - Categorías (panel)
+      summary: Activar o desactivar; falla si tiene subcategorías activas
+      operationId: cambiarEstado_6
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: integer
+          format: int64
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CambiarEstadoPeticion"
+        required: true
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/CategoriaRespuesta"
+      security:
+      - tokenPanel: []
+  /api/v1/subcategorias/{slug}:
+    get:
+      tags:
+      - Catálogo (tienda)
+      summary: Una subcategoría por slug
+      operationId: subcategoria
+      parameters:
+      - name: slug
+        in: path
+        required: true
+        schema:
+          type: string
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/SubcategoriaRespuesta"
+  /api/v1/productos:
+    get:
+      tags:
+      - Catálogo (tienda)
+      summary: "Listado con búsqueda, filtros, orden y paginación"
+      operationId: buscar
+      parameters:
+      - name: texto
+        in: query
+        required: false
+        schema:
+          type: string
+      - name: categoria
+        in: query
+        required: false
+        schema:
+          type: string
+      - name: subcategoria
+        in: query
+        required: false
+        schema:
+          type: string
+      - name: marca
+        in: query
+        required: false
+        schema:
+          type: string
+      - name: precioMinimo
+        in: query
+        required: false
+        schema:
+          type: number
+      - name: precioMaximo
+        in: query
+        required: false
+        schema:
+          type: number
+      - name: conStock
+        in: query
+        required: false
+        schema:
+          type: boolean
+      - name: destacado
+        in: query
+        required: false
+        schema:
+          type: boolean
+      - name: orden
+        in: query
+        required: false
+        schema:
+          type: string
+      - name: pagina
+        in: query
+        required: false
+        schema:
+          type: integer
+          format: int32
+          minimum: 1
+      - name: tamanoPagina
+        in: query
+        required: false
+        schema:
+          type: integer
+          format: int32
+          maximum: 48
+          minimum: 1
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/RespuestaPaginaProductoResumenRespuesta"
+  /api/v1/productos/{slug}:
+    get:
+      tags:
+      - Catálogo (tienda)
+      summary: Detalle de un producto por slug
+      operationId: porSlug
+      parameters:
+      - name: slug
+        in: path
+        required: true
+        schema:
+          type: string
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/ProductoDetalleRespuesta"
+  /api/v1/productos/{slug}/relacionados:
+    get:
+      tags:
+      - Catálogo (tienda)
+      summary: Hasta 4 productos de la misma subcategoría
+      operationId: relacionados
+      parameters:
+      - name: slug
+        in: path
+        required: true
+        schema:
+          type: string
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/ProductoResumenRespuesta"
+  /api/v1/marcas:
+    get:
+      tags:
+      - Catálogo (tienda)
+      summary: "Marcas activas, para el filtro de la tienda"
+      operationId: marcas
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/MarcaRespuesta"
+  /api/v1/marcas/{slug}:
+    get:
+      tags:
+      - Catálogo (tienda)
+      summary: Una marca por slug
+      operationId: marca
+      parameters:
+      - name: slug
+        in: path
+        required: true
+        schema:
+          type: string
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/MarcaRespuesta"
+  /api/v1/conversaciones/{token}:
+    get:
+      tags:
+      - Chat (tienda)
+      summary: Ver la conversación con su token de acceso
+      operationId: ver
+      parameters:
+      - name: token
+        in: path
+        required: true
+        schema:
+          type: string
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/ConversacionDetalleRespuesta"
+  /api/v1/categorias:
+    get:
+      tags:
+      - Catálogo (tienda)
+      summary: "Menú completo: categorías activas con sus subcategorías visibles"
+      operationId: menu
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/CategoriaRespuesta"
+  /api/v1/categorias/{slug}:
+    get:
+      tags:
+      - Catálogo (tienda)
+      summary: Una categoría con sus subcategorías activas
+      operationId: categoria
+      parameters:
+      - name: slug
+        in: path
+        required: true
+        schema:
+          type: string
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/CategoriaRespuesta"
+  /api/v1/carritos/{id}:
+    get:
+      tags:
+      - Carrito
+      summary: Ver un carrito
+      operationId: porId_5
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/CarritoRespuesta"
+  /api/v1/admin/papelera:
+    get:
+      tags:
+      - Papelera (panel)
+      summary: "Todo lo eliminado, con quién lo eliminó y cuándo"
+      operationId: listar_8
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/ElementoEliminado"
+      security:
+      - tokenPanel: []
+  /api/v1/admin/ordenes:
+    get:
+      tags:
+      - Órdenes (panel)
+      summary: "Listado de órdenes, de la más reciente a la más antigua"
+      operationId: listar_9
+      parameters:
+      - name: estado
+        in: query
+        required: false
+        schema:
+          type: string
+      - name: pagina
+        in: query
+        required: false
+        schema:
+          type: integer
+          format: int32
+          default: 1
+          minimum: 1
+      - name: tamanoPagina
+        in: query
+        required: false
+        schema:
+          type: integer
+          format: int32
+          default: 20
+          maximum: 100
+          minimum: 1
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/RespuestaPaginaOrdenResumenRespuesta"
+      security:
+      - tokenPanel: []
+  /api/v1/admin/ordenes/{id}:
+    get:
+      tags:
+      - Órdenes (panel)
+      summary: Detalle de una orden con sus líneas
+      operationId: porId_6
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: integer
+          format: int64
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/OrdenDetalleRespuesta"
+      security:
+      - tokenPanel: []
+  /api/v1/admin/notificaciones:
+    get:
+      tags:
+      - Notificaciones (panel)
+      summary: Lo pendiente y cuántas hay. Es lo que pinta la campana
+      operationId: bandeja
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/Bandeja"
+      security:
+      - tokenPanel: []
+  /api/v1/admin/notificaciones/historial:
+    get:
+      tags:
+      - Notificaciones (panel)
+      summary: "Todas, leídas incluidas"
+      operationId: historial
+      parameters:
+      - name: pagina
+        in: query
+        required: false
+        schema:
+          type: integer
+          format: int32
+          default: 1
+          minimum: 1
+      - name: tamanoPagina
+        in: query
+        required: false
+        schema:
+          type: integer
+          format: int32
+          default: 30
+          maximum: 100
+          minimum: 1
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/RespuestaPaginaNotificacionRespuesta"
+      security:
+      - tokenPanel: []
+  /api/v1/admin/metricas:
+    get:
+      tags:
+      - Tablero (panel)
+      summary: Todas las cifras del tablero en una sola petición
+      operationId: metricas
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/MetricasRespuesta"
+      security:
+      - tokenPanel: []
+  /api/v1/admin/conversaciones/{id}:
+    get:
+      tags:
+      - Chat (panel)
+      summary: Abrir el hilo. Marca como leídos los mensajes del cliente
+      operationId: abrir
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: integer
+          format: int64
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/ConversacionDetalleRespuesta"
+      security:
+      - tokenPanel: []
+  /api/v1/admin/clientes:
+    get:
+      tags:
+      - Clientes (panel)
+      summary: Listado de clientes con su número de órdenes y total comprado
+      operationId: listar_10
+      parameters:
+      - name: texto
+        in: query
+        required: false
+        schema:
+          type: string
+      - name: pagina
+        in: query
+        required: false
+        schema:
+          type: integer
+          format: int32
+          default: 1
+          minimum: 1
+      - name: tamanoPagina
+        in: query
+        required: false
+        schema:
+          type: integer
+          format: int32
+          default: 20
+          maximum: 100
+          minimum: 1
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/RespuestaPaginaClienteRespuesta"
+      security:
+      - tokenPanel: []
+  /api/v1/admin/clientes/{id}:
+    get:
+      tags:
+      - Clientes (panel)
+      summary: Detalle de un cliente con su historial de órdenes
+      operationId: porId_7
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: integer
+          format: int64
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/ClienteDetalleRespuesta"
+      security:
+      - tokenPanel: []
+  /api/v1/admin/categorias/{id}/subcategorias:
+    get:
+      tags:
+      - Categorías (panel)
+      summary: Subcategorías de una categoría
+      operationId: subcategoriasDe
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: integer
+          format: int64
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/SubcategoriaRespuesta"
+      security:
+      - tokenPanel: []
+  /api/v1/admin/archivos/{id}:
+    get:
+      tags:
+      - Archivos
+      summary: Detalle de un archivo
+      operationId: porId_8
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: integer
+          format: int64
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/ArchivoRespuesta"
+      security:
+      - tokenPanel: []
+    delete:
+      tags:
+      - Archivos
+      summary: Borrar un archivo que no esté en uso
+      operationId: borrar
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: integer
+          format: int64
+      responses:
+        "204":
+          description: No Content
+      security:
+      - tokenPanel: []
+  /api/v1/admin/administradores/yo:
+    get:
+      tags:
+      - Administradores
+      summary: Quién soy
+      operationId: yo
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/AdministradorRespuesta"
+      security:
+      - tokenPanel: []
+components:
+  schemas:
+    ActualizarSubcategoriaPeticion:
+      type: object
+      properties:
+        categoriaId:
+          type: integer
+          format: int64
+        nombre:
+          type: string
+          maxLength: 80
+          minLength: 0
+        descripcion:
+          type: string
+          maxLength: 500
+          minLength: 0
+        imagenId:
+          type: integer
+          format: int64
+        orden:
+          type: integer
+          format: int32
+        activa:
+          type: boolean
+      required:
+      - categoriaId
+      - nombre
+    ArchivoRespuesta:
+      type: object
+      properties:
+        id:
+          type: integer
+          format: int64
+        url:
+          type: string
+        urls:
+          type: object
+          additionalProperties:
+            type: string
+        textoAlt:
+          type: string
+        ancho:
+          type: integer
+          format: int32
+        alto:
+          type: integer
+          format: int32
+        bytes:
+          type: integer
+          format: int64
+        nombreOriginal:
+          type: string
+        creadoEn:
+          type: string
+          format: date-time
+    ReferenciaRespuesta:
+      type: object
+      properties:
+        id:
+          type: integer
+          format: int64
+        nombre:
+          type: string
+        slug:
+          type: string
+    SubcategoriaRespuesta:
+      type: object
+      properties:
+        id:
+          type: integer
+          format: int64
+        nombre:
+          type: string
+        slug:
+          type: string
+        descripcion:
+          type: string
+        imagen:
+          $ref: "#/components/schemas/ArchivoRespuesta"
+        orden:
+          type: integer
+          format: int32
+        activa:
+          type: boolean
+        categoria:
+          $ref: "#/components/schemas/ReferenciaRespuesta"
+    ActualizarProductoPeticion:
+      type: object
+      properties:
+        nombre:
+          type: string
+          maxLength: 160
+          minLength: 0
+        descripcionCorta:
+          type: string
+          maxLength: 300
+          minLength: 0
+        descripcion:
+          type: string
+          maxLength: 5000
+          minLength: 0
+        subcategoriaId:
+          type: integer
+          format: int64
+        marcaId:
+          type: integer
+          format: int64
+        precio:
+          type: number
+        precioAnterior:
+          type: number
+        stock:
+          type: integer
+          format: int32
+        destacado:
+          type: boolean
+        imagenIds:
+          type: array
+          items:
+            type: integer
+            format: int64
+      required:
+      - nombre
+      - precio
+      - subcategoriaId
+    ImagenRespuesta:
+      type: object
+      properties:
+        archivoId:
+          type: integer
+          format: int64
+        miniatura:
+          type: string
+        tarjeta:
+          type: string
+        detalle:
+          type: string
+        original:
+          type: string
+        textoAlt:
+          type: string
+        ancho:
+          type: integer
+          format: int32
+        alto:
+          type: integer
+          format: int32
+    ProductoAdminRespuesta:
+      type: object
+      properties:
+        id:
+          type: integer
+          format: int64
+        sku:
+          type: string
+        nombre:
+          type: string
+        slug:
+          type: string
+        descripcionCorta:
+          type: string
+        descripcion:
+          type: string
+        precio:
+          type: number
+        precioAnterior:
+          type: number
+        porcentajeDescuento:
+          type: integer
+          format: int32
+        stock:
+          type: integer
+          format: int32
+        destacado:
+          type: boolean
+        activo:
+          type: boolean
+        calificacionPromedio:
+          type: number
+        calificacionConteo:
+          type: integer
+          format: int32
+        vistas:
+          type: integer
+          format: int64
+        imagenes:
+          type: array
+          items:
+            $ref: "#/components/schemas/ImagenRespuesta"
+        marca:
+          $ref: "#/components/schemas/ReferenciaRespuesta"
+        subcategoria:
+          $ref: "#/components/schemas/ReferenciaRespuesta"
+        categoria:
+          $ref: "#/components/schemas/ReferenciaRespuesta"
+        creadoEn:
+          type: string
+          format: date-time
+        creadoPor:
+          type: string
+        actualizadoEn:
+          type: string
+          format: date-time
+        actualizadoPor:
+          type: string
+        version:
+          type: integer
+          format: int32
+    ActualizarMarcaPeticion:
+      type: object
+      properties:
+        nombre:
+          type: string
+          maxLength: 80
+          minLength: 0
+        descripcion:
+          type: string
+          maxLength: 500
+          minLength: 0
+        logoId:
+          type: integer
+          format: int64
+        activa:
+          type: boolean
+      required:
+      - nombre
+    MarcaRespuesta:
+      type: object
+      properties:
+        id:
+          type: integer
+          format: int64
+        nombre:
+          type: string
+        slug:
+          type: string
+        descripcion:
+          type: string
+        logo:
+          $ref: "#/components/schemas/ArchivoRespuesta"
+        activa:
+          type: boolean
+    CuponPeticion:
+      type: object
+      properties:
+        codigo:
+          type: string
+          maxLength: 40
+          minLength: 0
+          pattern: "[A-Za-z0-9._-]+"
+        tipo:
+          type: string
+          minLength: 1
+          pattern: PORCENTAJE|MONTO_FIJO
+        valor:
+          type: number
+        subtotalMinimo:
+          type: number
+        iniciaEn:
+          type: string
+          format: date-time
+        terminaEn:
+          type: string
+          format: date-time
+        usosMaximos:
+          type: integer
+          format: int32
+        activo:
+          type: boolean
+      required:
+      - codigo
+      - iniciaEn
+      - terminaEn
+      - tipo
+      - valor
+    CuponRespuesta:
+      type: object
+      properties:
+        id:
+          type: integer
+          format: int64
+        codigo:
+          type: string
+        tipo:
+          type: string
+        valor:
+          type: number
+        subtotalMinimo:
+          type: number
+        iniciaEn:
+          type: string
+          format: date-time
+        terminaEn:
+          type: string
+          format: date-time
+        usosMaximos:
+          type: integer
+          format: int32
+        usosActuales:
+          type: integer
+          format: int32
+        activo:
+          type: boolean
+        vigente:
+          type: boolean
+    ActualizarCategoriaPeticion:
+      type: object
+      properties:
+        nombre:
+          type: string
+          maxLength: 80
+          minLength: 0
+        descripcion:
+          type: string
+          maxLength: 500
+          minLength: 0
+        imagenId:
+          type: integer
+          format: int64
+        orden:
+          type: integer
+          format: int32
+        activa:
+          type: boolean
+      required:
+      - nombre
+    CategoriaRespuesta:
+      type: object
+      properties:
+        id:
+          type: integer
+          format: int64
+        nombre:
+          type: string
+        slug:
+          type: string
+        descripcion:
+          type: string
+        imagen:
+          $ref: "#/components/schemas/ArchivoRespuesta"
+        orden:
+          type: integer
+          format: int32
+        activa:
+          type: boolean
+        subcategorias:
+          type: array
+          items:
+            $ref: "#/components/schemas/SubcategoriaRespuesta"
+    ActualizarAdministradorPeticion:
+      type: object
+      properties:
+        nombre:
+          type: string
+          maxLength: 120
+          minLength: 0
+        rol:
+          type: string
+          minLength: 1
+          pattern: ADMINISTRADOR|SUPERADMINISTRADOR
+        activo:
+          type: boolean
+      required:
+      - nombre
+      - rol
+    AdministradorRespuesta:
+      type: object
+      properties:
+        id:
+          type: integer
+          format: int64
+        usuario:
+          type: string
+        nombre:
+          type: string
+        rol:
+          type: string
+        activo:
+          type: boolean
+        ultimoAccesoEn:
+          type: string
+          format: date-time
+        creadoEn:
+          type: string
+          format: date-time
+    EnviarMensajePeticion:
+      type: object
+      properties:
+        cuerpo:
+          type: string
+          maxLength: 4000
+          minLength: 0
+        adjuntoIds:
+          type: array
+          items:
+            type: integer
+            format: int64
+    AdjuntoRespuesta:
+      type: object
+      properties:
+        id:
+          type: integer
+          format: int64
+        nombre:
+          type: string
+        tipoMime:
+          type: string
+        bytes:
+          type: integer
+          format: int64
+        url:
+          type: string
+        esImagen:
+          type: boolean
+    MensajeRespuesta:
+      type: object
+      properties:
+        id:
+          type: integer
+          format: int64
+        autor:
+          type: string
+        autorNombre:
+          type: string
+        cuerpo:
+          type: string
+        adjuntos:
+          type: array
+          items:
+            $ref: "#/components/schemas/AdjuntoRespuesta"
+        enviadoEn:
+          type: string
+          format: date-time
+        leidoEn:
+          type: string
+          format: date-time
+    CarritoRespuesta:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/ItemCarritoRespuesta"
+        totalUnidades:
+          type: integer
+          format: int32
+        subtotal:
+          type: number
+        descuento:
+          type: number
+        total:
+          type: number
+        cuponAplicado:
+          type: string
+        cuponActivo:
+          type: boolean
+        motivoCuponInactivo:
+          type: string
+    ItemCarritoRespuesta:
+      type: object
+      properties:
+        id:
+          type: integer
+          format: int64
+        productoId:
+          type: integer
+          format: int64
+        nombre:
+          type: string
+        slug:
+          type: string
+        imagen:
+          type: string
+        precioUnitario:
+          type: number
+        cantidad:
+          type: integer
+          format: int32
+        stockDisponible:
+          type: integer
+          format: int32
+        totalLinea:
+          type: number
+    AgregarItemPeticion:
+      type: object
+      properties:
+        productoId:
+          type: integer
+          format: int64
+        cantidad:
+          type: integer
+          format: int32
+          maximum: 99
+          minimum: 1
+      required:
+      - productoId
+    AplicarCuponPeticion:
+      type: object
+      properties:
+        codigo:
+          type: string
+          maxLength: 40
+          minLength: 0
+      required:
+      - codigo
+    CrearSubcategoriaPeticion:
+      type: object
+      properties:
+        categoriaId:
+          type: integer
+          format: int64
+        nombre:
+          type: string
+          maxLength: 80
+          minLength: 0
+        descripcion:
+          type: string
+          maxLength: 500
+          minLength: 0
+        imagenId:
+          type: integer
+          format: int64
+        orden:
+          type: integer
+          format: int32
+      required:
+      - categoriaId
+      - nombre
+    SesionRespuesta:
+      type: object
+      properties:
+        tokenAcceso:
+          type: string
+        expiraEnSegundos:
+          type: integer
+          format: int64
+        administrador:
+          $ref: "#/components/schemas/AdministradorRespuesta"
+    CrearProductoPeticion:
+      type: object
+      properties:
+        sku:
+          type: string
+          maxLength: 40
+          minLength: 0
+          pattern: "[A-Za-z0-9._-]+"
+        nombre:
+          type: string
+          maxLength: 160
+          minLength: 0
+        descripcionCorta:
+          type: string
+          maxLength: 300
+          minLength: 0
+        descripcion:
+          type: string
+          maxLength: 5000
+          minLength: 0
+        subcategoriaId:
+          type: integer
+          format: int64
+        marcaId:
+          type: integer
+          format: int64
+        precio:
+          type: number
+        precioAnterior:
+          type: number
+        stock:
+          type: integer
+          format: int32
+        destacado:
+          type: boolean
+        imagenIds:
+          type: array
+          items:
+            type: integer
+            format: int64
+      required:
+      - nombre
+      - precio
+      - sku
+      - subcategoriaId
+    RestaurarPeticion:
+      type: object
+      properties:
+        tipo:
+          type: string
+          minLength: 1
+        id:
+          type: integer
+          format: int64
+      required:
+      - id
+      - tipo
+    ElementoEliminado:
+      type: object
+      properties:
+        tipo:
+          type: string
+        etiquetaTipo:
+          type: string
+        id:
+          type: integer
+          format: int64
+        nombre:
+          type: string
+        detalle:
+          type: string
+        eliminadoEn:
+          type: string
+          format: date-time
+        eliminadoPor:
+          type: string
+    CrearMarcaPeticion:
+      type: object
+      properties:
+        nombre:
+          type: string
+          maxLength: 80
+          minLength: 0
+        descripcion:
+          type: string
+          maxLength: 500
+          minLength: 0
+        logoId:
+          type: integer
+          format: int64
+      required:
+      - nombre
+    AbrirConversacionPeticion:
+      type: object
+      properties:
+        clienteId:
+          type: integer
+          format: int64
+        ordenId:
+          type: integer
+          format: int64
+        asunto:
+          type: string
+          maxLength: 160
+          minLength: 0
+        mensaje:
+          type: string
+          maxLength: 4000
+          minLength: 0
+      required:
+      - asunto
+      - clienteId
+    ConversacionDetalleRespuesta:
+      type: object
+      properties:
+        conversacion:
+          $ref: "#/components/schemas/ConversacionResumenRespuesta"
+        mensajes:
+          type: array
+          items:
+            $ref: "#/components/schemas/MensajeRespuesta"
+        tokenAcceso:
+          type: string
+    ConversacionResumenRespuesta:
+      type: object
+      properties:
+        id:
+          type: integer
+          format: int64
+        asunto:
+          type: string
+        estado:
+          type: string
+        clienteId:
+          type: integer
+          format: int64
+        clienteNombre:
+          type: string
+        clienteEmail:
+          type: string
+        ordenId:
+          type: integer
+          format: int64
+        ordenNumero:
+          type: string
+        noLeidos:
+          type: integer
+          format: int32
+        ultimoMensajeEn:
+          type: string
+          format: date-time
+        creadoEn:
+          type: string
+          format: date-time
+    CrearCategoriaPeticion:
+      type: object
+      properties:
+        nombre:
+          type: string
+          maxLength: 80
+          minLength: 0
+        descripcion:
+          type: string
+          maxLength: 500
+          minLength: 0
+        imagenId:
+          type: integer
+          format: int64
+        orden:
+          type: integer
+          format: int32
+      required:
+      - nombre
+    CrearAdministradorPeticion:
+      type: object
+      properties:
+        usuario:
+          type: string
+          maxLength: 60
+          minLength: 3
+          pattern: "[a-z0-9._-]+"
+        contrasena:
+          type: string
+          minLength: 1
+        nombre:
+          type: string
+          maxLength: 120
+          minLength: 0
+        rol:
+          type: string
+          pattern: ADMINISTRADOR|SUPERADMINISTRADOR
+      required:
+      - contrasena
+      - nombre
+      - usuario
+    RestablecerContrasenaPeticion:
+      type: object
+      properties:
+        contrasenaNueva:
+          type: string
+          minLength: 1
+      required:
+      - contrasenaNueva
+    CambiarContrasenaPeticion:
+      type: object
+      properties:
+        contrasenaActual:
+          type: string
+          minLength: 1
+        contrasenaNueva:
+          type: string
+          minLength: 1
+      required:
+      - contrasenaActual
+      - contrasenaNueva
+    AccesoPeticion:
+      type: object
+      properties:
+        usuario:
+          type: string
+          maxLength: 60
+          minLength: 0
+        contrasena:
+          type: string
+          maxLength: 200
+          minLength: 0
+      required:
+      - contrasena
+      - usuario
+    CambiarCantidadPeticion:
+      type: object
+      properties:
+        cantidad:
+          type: integer
+          format: int32
+          maximum: 99
+          minimum: 1
+    CambiarEstadoPeticion:
+      type: object
+      properties:
+        activo:
+          type: boolean
+    CambiarEstadoOrdenPeticion:
+      type: object
+      properties:
+        estado:
+          type: string
+          minLength: 1
+          pattern: PENDIENTE|PAGADA|ENVIADA|ENTREGADA|CANCELADA
+      required:
+      - estado
+    Linea:
+      type: object
+      properties:
+        productoId:
+          type: integer
+          format: int64
+        nombreProducto:
+          type: string
+        sku:
+          type: string
+        precioUnitario:
+          type: number
+        cantidad:
+          type: integer
+          format: int32
+        totalLinea:
+          type: number
+    OrdenDetalleRespuesta:
+      type: object
+      properties:
+        id:
+          type: integer
+          format: int64
+        numero:
+          type: string
+        nombreContacto:
+          type: string
+        email:
+          type: string
+        telefono:
+          type: string
+        direccion:
+          type: string
+        subtotal:
+          type: number
+        descuento:
+          type: number
+        total:
+          type: number
+        codigoCupon:
+          type: string
+        estado:
+          type: string
+        estadoEtiqueta:
+          type: string
+        clienteId:
+          type: integer
+          format: int64
+        clienteNombre:
+          type: string
+        conversacionId:
+          type: integer
+          format: int64
+        transicionesPermitidas:
+          type: array
+          items:
+            type: string
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/Linea"
+        creadoEn:
+          type: string
+          format: date-time
+        actualizadoEn:
+          type: string
+          format: date-time
+        actualizadoPor:
+          type: string
+    ClienteRespuesta:
+      type: object
+      properties:
+        id:
+          type: integer
+          format: int64
+        email:
+          type: string
+        emailVerificado:
+          type: boolean
+        nombre:
+          type: string
+        telefono:
+          type: string
+        activo:
+          type: boolean
+        tieneContrasena:
+          type: boolean
+        ordenes:
+          type: integer
+          format: int64
+        totalComprado:
+          type: number
+        ultimoAccesoEn:
+          type: string
+          format: date-time
+        creadoEn:
+          type: string
+          format: date-time
+    ProductoResumenRespuesta:
+      type: object
+      properties:
+        id:
+          type: integer
+          format: int64
+        nombre:
+          type: string
+        slug:
+          type: string
+        descripcionCorta:
+          type: string
+        precio:
+          type: number
+        precioAnterior:
+          type: number
+        porcentajeDescuento:
+          type: integer
+          format: int32
+        hayStock:
+          type: boolean
+        destacado:
+          type: boolean
+        calificacionPromedio:
+          type: number
+        calificacionConteo:
+          type: integer
+          format: int32
+        imagen:
+          type: string
+        textoAltImagen:
+          type: string
+        marca:
+          $ref: "#/components/schemas/ReferenciaRespuesta"
+        subcategoria:
+          $ref: "#/components/schemas/ReferenciaRespuesta"
+    RespuestaPaginaProductoResumenRespuesta:
+      type: object
+      properties:
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/ProductoResumenRespuesta"
+        pagina:
+          type: integer
+          format: int32
+        tamanoPagina:
+          type: integer
+          format: int32
+        totalItems:
+          type: integer
+          format: int64
+        totalPaginas:
+          type: integer
+          format: int32
+    ProductoDetalleRespuesta:
+      type: object
+      properties:
+        id:
+          type: integer
+          format: int64
+        nombre:
+          type: string
+        slug:
+          type: string
+        descripcionCorta:
+          type: string
+        descripcion:
+          type: string
+        precio:
+          type: number
+        precioAnterior:
+          type: number
+        porcentajeDescuento:
+          type: integer
+          format: int32
+        stock:
+          type: integer
+          format: int32
+        hayStock:
+          type: boolean
+        destacado:
+          type: boolean
+        calificacionPromedio:
+          type: number
+        calificacionConteo:
+          type: integer
+          format: int32
+        imagenes:
+          type: array
+          items:
+            $ref: "#/components/schemas/ImagenRespuesta"
+        marca:
+          $ref: "#/components/schemas/ReferenciaRespuesta"
+        subcategoria:
+          $ref: "#/components/schemas/ReferenciaRespuesta"
+        categoria:
+          $ref: "#/components/schemas/ReferenciaRespuesta"
+    RespuestaPaginaSubcategoriaRespuesta:
+      type: object
+      properties:
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/SubcategoriaRespuesta"
+        pagina:
+          type: integer
+          format: int32
+        tamanoPagina:
+          type: integer
+          format: int32
+        totalItems:
+          type: integer
+          format: int64
+        totalPaginas:
+          type: integer
+          format: int32
+    RespuestaPaginaProductoAdminRespuesta:
+      type: object
+      properties:
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/ProductoAdminRespuesta"
+        pagina:
+          type: integer
+          format: int32
+        tamanoPagina:
+          type: integer
+          format: int32
+        totalItems:
+          type: integer
+          format: int64
+        totalPaginas:
+          type: integer
+          format: int32
+    OrdenResumenRespuesta:
+      type: object
+      properties:
+        id:
+          type: integer
+          format: int64
+        numero:
+          type: string
+        nombreContacto:
+          type: string
+        email:
+          type: string
+        total:
+          type: number
+        estado:
+          type: string
+        estadoEtiqueta:
+          type: string
+        totalUnidades:
+          type: integer
+          format: int32
+        creadoEn:
+          type: string
+          format: date-time
+    RespuestaPaginaOrdenResumenRespuesta:
+      type: object
+      properties:
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/OrdenResumenRespuesta"
+        pagina:
+          type: integer
+          format: int32
+        tamanoPagina:
+          type: integer
+          format: int32
+        totalItems:
+          type: integer
+          format: int64
+        totalPaginas:
+          type: integer
+          format: int32
+    Bandeja:
+      type: object
+      properties:
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/NotificacionRespuesta"
+        pendientes:
+          type: integer
+          format: int64
+    NotificacionRespuesta:
+      type: object
+      properties:
+        id:
+          type: integer
+          format: int64
+        tipo:
+          type: string
+        severidad:
+          type: string
+        titulo:
+          type: string
+        detalle:
+          type: string
+        enlace:
+          type: string
+        leida:
+          type: boolean
+        creadoEn:
+          type: string
+          format: date-time
+    RespuestaPaginaNotificacionRespuesta:
+      type: object
+      properties:
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/NotificacionRespuesta"
+        pagina:
+          type: integer
+          format: int32
+        tamanoPagina:
+          type: integer
+          format: int32
+        totalItems:
+          type: integer
+          format: int64
+        totalPaginas:
+          type: integer
+          format: int32
+    ConteoEstado:
+      type: object
+      properties:
+        estado:
+          type: string
+        etiqueta:
+          type: string
+        cantidad:
+          type: integer
+          format: int64
+        total:
+          type: number
+    MetricasRespuesta:
+      type: object
+      properties:
+        resumen:
+          $ref: "#/components/schemas/Resumen"
+        ventasPorDia:
+          type: array
+          items:
+            $ref: "#/components/schemas/PuntoVenta"
+        ordenesPorEstado:
+          type: array
+          items:
+            $ref: "#/components/schemas/ConteoEstado"
+        masVistos:
+          type: array
+          items:
+            $ref: "#/components/schemas/ProductoVisto"
+        masVendidos:
+          type: array
+          items:
+            $ref: "#/components/schemas/ProductoVendido"
+        stockBajo:
+          type: array
+          items:
+            $ref: "#/components/schemas/StockBajo"
+    ProductoVendido:
+      type: object
+      properties:
+        nombre:
+          type: string
+        unidades:
+          type: integer
+          format: int64
+        total:
+          type: number
+    ProductoVisto:
+      type: object
+      properties:
+        id:
+          type: integer
+          format: int64
+        nombre:
+          type: string
+        slug:
+          type: string
+        vistas:
+          type: integer
+          format: int64
+        imagen:
+          type: string
+    PuntoVenta:
+      type: object
+      properties:
+        fecha:
+          type: string
+          format: date
+        total:
+          type: number
+        ordenes:
+          type: integer
+          format: int64
+    Resumen:
+      type: object
+      properties:
+        ventas30Dias:
+          type: number
+        ordenes30Dias:
+          type: integer
+          format: int64
+        ticketPromedio:
+          type: number
+        ordenesPendientes:
+          type: integer
+          format: int64
+        productosActivos:
+          type: integer
+          format: int64
+        productosBorrador:
+          type: integer
+          format: int64
+        productosSinStock:
+          type: integer
+          format: int64
+        vistasTotales:
+          type: integer
+          format: int64
+        valorInventario:
+          type: number
+    StockBajo:
+      type: object
+      properties:
+        id:
+          type: integer
+          format: int64
+        nombre:
+          type: string
+        sku:
+          type: string
+        stock:
+          type: integer
+          format: int32
+    RespuestaPaginaMarcaRespuesta:
+      type: object
+      properties:
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/MarcaRespuesta"
+        pagina:
+          type: integer
+          format: int32
+        tamanoPagina:
+          type: integer
+          format: int32
+        totalItems:
+          type: integer
+          format: int64
+        totalPaginas:
+          type: integer
+          format: int32
+    RespuestaPaginaCuponRespuesta:
+      type: object
+      properties:
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/CuponRespuesta"
+        pagina:
+          type: integer
+          format: int32
+        tamanoPagina:
+          type: integer
+          format: int32
+        totalItems:
+          type: integer
+          format: int64
+        totalPaginas:
+          type: integer
+          format: int32
+    RespuestaPaginaConversacionResumenRespuesta:
+      type: object
+      properties:
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/ConversacionResumenRespuesta"
+        pagina:
+          type: integer
+          format: int32
+        tamanoPagina:
+          type: integer
+          format: int32
+        totalItems:
+          type: integer
+          format: int64
+        totalPaginas:
+          type: integer
+          format: int32
+    RespuestaPaginaClienteRespuesta:
+      type: object
+      properties:
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/ClienteRespuesta"
+        pagina:
+          type: integer
+          format: int32
+        tamanoPagina:
+          type: integer
+          format: int32
+        totalItems:
+          type: integer
+          format: int64
+        totalPaginas:
+          type: integer
+          format: int32
+    ClienteDetalleRespuesta:
+      type: object
+      properties:
+        cliente:
+          $ref: "#/components/schemas/ClienteRespuesta"
+        ordenes:
+          type: array
+          items:
+            $ref: "#/components/schemas/OrdenResumenRespuesta"
+        conversaciones:
+          type: array
+          items:
+            $ref: "#/components/schemas/ConversacionDelCliente"
+    ConversacionDelCliente:
+      type: object
+      properties:
+        id:
+          type: integer
+          format: int64
+        asunto:
+          type: string
+        estado:
+          type: string
+        noLeidos:
+          type: integer
+          format: int64
+    RespuestaPaginaCategoriaRespuesta:
+      type: object
+      properties:
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/CategoriaRespuesta"
+        pagina:
+          type: integer
+          format: int32
+        tamanoPagina:
+          type: integer
+          format: int32
+        totalItems:
+          type: integer
+          format: int64
+        totalPaginas:
+          type: integer
+          format: int32
+    RespuestaPaginaArchivoRespuesta:
+      type: object
+      properties:
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/ArchivoRespuesta"
+        pagina:
+          type: integer
+          format: int32
+        tamanoPagina:
+          type: integer
+          format: int32
+        totalItems:
+          type: integer
+          format: int64
+        totalPaginas:
+          type: integer
+          format: int32
+    RespuestaPaginaAdministradorRespuesta:
+      type: object
+      properties:
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/AdministradorRespuesta"
+        pagina:
+          type: integer
+          format: int32
+        tamanoPagina:
+          type: integer
+          format: int32
+        totalItems:
+          type: integer
+          format: int64
+        totalPaginas:
+          type: integer
+          format: int32
+  securitySchemes:
+    tokenPanel:
+      type: http
+      description: Token de acceso del panel. Se obtiene en POST /api/v1/admin/acceso.
+      scheme: bearer
+      bearerFormat: JWT
