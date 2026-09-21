@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { Link } from 'react-router-dom'
-import { Eye, EyeOff, ImageOff, Package, Pencil, Plus, Search, Trash2 } from 'lucide-react'
+import { Eye, EyeOff, ImageOff, Package, Pencil, Plus, Search, Star, Trash2 } from 'lucide-react'
 import { productos as api } from '../api/recursos'
 import type { ProductoAdmin } from '../api/tipos'
 import { AvisoError } from '../componentes/Aviso'
@@ -60,6 +60,19 @@ export default function Productos() {
     },
     // El caso habitual es publicar sin imagen: el mensaje del servidor ya lo
     // dice, así que se muestra tal cual en vez de inventar otro.
+    onError: (fallo) => toast.error(fallo),
+  })
+
+  const destacar = useMutation({
+    mutationFn: ({ id, destacado }: { id: number; destacado: boolean }) =>
+      api.cambiarDestacado(id, destacado),
+    onSuccess: (producto) => {
+      void clienteConsultas.invalidateQueries({ queryKey: ['productos'] })
+      toast.exito(
+        producto.destacado ? 'Destacado en portada' : 'Ya no está destacado',
+        producto.nombre,
+      )
+    },
     onError: (fallo) => toast.error(fallo),
   })
 
@@ -205,6 +218,15 @@ export default function Productos() {
                       >
                         <Pencil size={16} />
                       </Link>
+                      <BotonIcono
+                        icono={Star}
+                        etiqueta={producto.destacado ? 'Quitar de destacados' : 'Destacar en portada'}
+                        activo={producto.destacado}
+                        desactivado={destacar.isPending}
+                        alPulsar={() =>
+                          destacar.mutate({ id: producto.id, destacado: !producto.destacado })
+                        }
+                      />
                       <BotonIcono
                         icono={producto.activo ? EyeOff : Eye}
                         etiqueta={producto.activo ? 'Despublicar' : 'Publicar'}

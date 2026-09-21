@@ -1943,6 +1943,16 @@ textarea.con-error {
   color: var(--peligro);
 }
 
+.accion-icono.activo {
+  color: #c98a06;
+}
+
+.accion-icono.activo:hover:not(:disabled) {
+  background: var(--aviso-suave);
+  border-color: var(--aviso-suave);
+  color: var(--aviso);
+}
+
 .accion-icono:disabled {
   opacity: 0.45;
   cursor: not-allowed;
@@ -1957,7 +1967,8 @@ textarea.con-error {
   }
 
   tr:hover td.acciones .accion-icono,
-  td.acciones .accion-icono:focus-visible {
+  td.acciones .accion-icono:focus-visible,
+  td.acciones .accion-icono.activo {
     opacity: 1;
   }
 }

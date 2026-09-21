@@ -219,8 +219,8 @@ nativo no esté disponible en la plataforma de despliegue.
 ### La prueba de extremo a extremo
 
 ```bash
-python ../../pruebas/humo-api.py     # 123 comprobaciones
-python ../../pruebas/humo-chat.py    # 57 comprobaciones
+python ../../pruebas/humo-api.py     # 124 comprobaciones
+python ../../pruebas/humo-chat.py    # 60 comprobaciones
 ```
 
 Necesitan la base y el backend en marcha, y son **idempotentes**: montan el

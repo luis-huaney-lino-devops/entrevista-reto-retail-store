@@ -92,6 +92,13 @@ export const productos = {
   cambiarEstado: (id: number, activo: boolean) =>
     peticion<ProductoAdmin>(`/admin/productos/${id}/estado`, { metodo: 'PATCH', cuerpo: { activo } }),
 
+  /** Un clic desde la lista: no hay que reenviar el producto entero. */
+  cambiarDestacado: (id: number, destacado: boolean) =>
+    peticion<ProductoAdmin>(`/admin/productos/${id}/destacado`, {
+      metodo: 'PATCH',
+      cuerpo: { destacado },
+    }),
+
   eliminar: (id: number) => peticion<void>(`/admin/productos/${id}`, { metodo: 'DELETE' }),
 }
 

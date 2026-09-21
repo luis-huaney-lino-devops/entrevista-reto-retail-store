@@ -1363,6 +1363,34 @@ paths:
                 $ref: "#/components/schemas/ProductoAdminRespuesta"
       security:
       - tokenPanel: []
+  /api/v1/admin/productos/{id}/destacado:
+    patch:
+      tags:
+      - Productos (panel)
+      summary: Destacar en portada o quitar de destacados
+      operationId: cambiarDestacado
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: integer
+          format: int64
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CambiarDestacadoPeticion"
+        required: true
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/ProductoAdminRespuesta"
+      security:
+      - tokenPanel: []
   /api/v1/admin/ordenes/{id}/estado:
     patch:
       tags:
@@ -2825,6 +2853,11 @@ components:
       type: object
       properties:
         activo:
+          type: boolean
+    CambiarDestacadoPeticion:
+      type: object
+      properties:
+        destacado:
           type: boolean
     CambiarEstadoOrdenPeticion:
       type: object

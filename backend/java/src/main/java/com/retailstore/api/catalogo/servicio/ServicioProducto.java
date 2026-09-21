@@ -159,6 +159,15 @@ public class ServicioProducto {
         return ProductoAdminRespuesta.de(guardado);
     }
 
+    public ProductoAdminRespuesta cambiarDestacado(Long id, boolean destacado) {
+        Producto producto = buscarConDetalle(id);
+        producto.destacar(destacado);
+        // Volcar antes de mapear: la auditoría y la versión las escribe
+        // Hibernate al volcar, no al mutar la entidad.
+        productos.flush();
+        return ProductoAdminRespuesta.de(producto);
+    }
+
     // =========================================================== tienda
 
     @Transactional(readOnly = true)

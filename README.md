@@ -9,8 +9,8 @@ E-commerce del reto técnico. Monorepo:
 | **`apps/storefront/`** | Tienda pública. Next.js con SSR/ISR | Sin construir |
 | **`database/migrations/`** | Esquema y datos, aplicados por Flyway al arrancar. Fuente única del esquema | `V001`–`V008` |
 | **`contracts/openapi.yaml`** | Contrato REST. **Generado** desde la aplicación | Al día |
-| **`pruebas/humo-api.py`** | Extremo a extremo contra la API en marcha: catálogo, panel, órdenes, tablero | 123 comprobaciones |
-| **`pruebas/humo-chat.py`** | Extremo a extremo del chat por WebSocket, los adjuntos, las notificaciones y la papelera | 57 comprobaciones |
+| **`pruebas/humo-api.py`** | Extremo a extremo contra la API en marcha: catálogo, panel, órdenes, tablero | 124 comprobaciones |
+| **`pruebas/humo-chat.py`** | Extremo a extremo del chat por WebSocket, los adjuntos, las notificaciones y la papelera | 60 comprobaciones |
 | **`docs/`** | Especificación, reglas de negocio y decisiones | — |
 
 `_empleados-v1/` y `docs copy/` son restos de un proyecto anterior y no forman

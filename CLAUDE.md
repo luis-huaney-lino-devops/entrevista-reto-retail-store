@@ -96,8 +96,8 @@ Las dos necesitan la API levantada y son **idempotentes**: se pueden repetir
 sobre la misma base sin limpiarla.
 
 ```bash
-python pruebas/humo-api.py     # 123 comprobaciones: catálogo, panel, órdenes, tablero
-python pruebas/humo-chat.py    # 57: chat por WebSocket, adjuntos, notificaciones, papelera
+python pruebas/humo-api.py     # 124 comprobaciones: catálogo, panel, órdenes, tablero
+python pruebas/humo-chat.py    # 60: chat por WebSocket, adjuntos, notificaciones, papelera
 ```
 
 Merecen la pena: han encontrado **seis** defectos que ninguna prueba unitaria

@@ -206,6 +206,18 @@ public class Producto extends EntidadEliminable {
         this.activo = false;
     }
 
+    /**
+     * Entra o sale de la portada.
+     *
+     * <p>Se puede destacar un borrador. No es un descuido: la portada solo
+     * muestra publicados, así que destacar algo que todavía no lo está es
+     * dejarlo preparado, y prohibirlo obligaría a acordarse de volver a
+     * marcarlo después de publicar.
+     */
+    public void destacar(boolean destacado) {
+        this.destacado = destacado;
+    }
+
     public void descontarStock(int cantidad) {
         if (cantidad > stock) {
             throw new ExcepcionAplicacion(CodigoError.INSUFFICIENT_STOCK,

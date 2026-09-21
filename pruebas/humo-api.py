@@ -243,6 +243,17 @@ s, cuerpo, _ = pedir("PATCH", "/admin/productos/%d/estado" % producto["id"], {"a
 revisar("publicar sin imagen -> 422 PRODUCT_REQUIRES_IMAGE",
         s == 422 and cuerpo["code"] == "PRODUCT_REQUIRES_IMAGE", (s, cuerpo.get("code")))
 
+# Destacar desde la lista: un PATCH con un booleano, no el producto entero.
+s, destacado, _ = pedir("PATCH", "/admin/productos/%d/destacado" % producto["id"],
+                        {"destacado": True}, token=token)
+revisar("destacar en portada", s == 200 and destacado["destacado"] is True, (s, destacado))
+revisar("y no toca nada más del producto",
+        destacado["nombre"] == producto["nombre"] and destacado["stock"] == producto["stock"],
+        (destacado.get("nombre"), destacado.get("stock")))
+s, quitado, _ = pedir("PATCH", "/admin/productos/%d/destacado" % producto["id"],
+                      {"destacado": False}, token=token)
+revisar("y quitarlo de destacados", s == 200 and quitado["destacado"] is False, (s, quitado))
+
 s, cuerpo, _ = pedir("POST", "/admin/productos",
                      dict(nuevo, sku="X-" + sufijo.upper(), precio=-5), token=token)
 revisar("precio negativo -> 400 VALIDATION_ERROR con el campo",
@@ -412,7 +423,30 @@ s, pendientes, _ = pedir("GET", "/admin/ordenes?estado=PENDIENTE", token=token)
 revisar("filtro por estado", s == 200 and all(o["estado"] == "PENDIENTE" for o in pendientes["items"]),
         s)
 
-idOrden = pendientes["items"][0]["id"]
+# A donde se puede ir desde cada estado. Es la misma tabla que EstadoOrden, y
+# repetirla aqui es el sentido de la prueba: si alguien cambia la maquina de
+# estados sin querer, esto lo dice.
+SIGUIENTES = {
+    "PENDIENTE": ["CANCELADA", "PAGADA"],
+    "PAGADA": ["CANCELADA", "ENVIADA"],
+    "ENVIADA": ["ENTREGADA"],
+}
+
+# Cualquier orden viva, no forzosamente una PENDIENTE.
+#
+# La prueba mueve una orden hasta cancelarla, asi que cada ejecucion consume
+# una: exigir que fuera PENDIENTE la hacia fallar en cuanto se agotaban las de
+# la semilla, y no hay checkout todavia que cree mas. El pozo de ordenes
+# abiertas es finito; se repone recreando la base con `down -v`.
+s, abiertas, _ = pedir("GET", "/admin/ordenes?tamanoPagina=100", token=token)
+vivas = [o for o in abiertas["items"] if o["estado"] in SIGUIENTES]
+revisar("queda alguna orden sin cerrar con la que probar", len(vivas) > 0,
+        "solo hay órdenes entregadas o canceladas; recrea la base para reponer la demo")
+
+idOrden = vivas[0]["id"]
+estadoInicial = vivas[0]["estado"]
+# El salto invalido: dos pasos por delante del estado actual.
+SALTO = {"PENDIENTE": "ENTREGADA", "PAGADA": "ENTREGADA", "ENVIADA": "PAGADA"}
 s, detalle, _ = pedir("GET", "/admin/ordenes/%d" % idOrden, token=token)
 revisar("detalle con líneas", s == 200 and len(detalle["items"]) > 0, s)
 revisar("las líneas copian nombre, sku y precio",
@@ -420,9 +454,9 @@ revisar("las líneas copian nombre, sku y precio",
 revisar("los importes cuadran con las líneas",
         abs(sum(l["totalLinea"] for l in detalle["items"]) - detalle["subtotal"]) < 0.01,
         (detalle["subtotal"], [l["totalLinea"] for l in detalle["items"]]))
-revisar("una pendiente solo puede pagarse o cancelarse",
-        sorted(detalle["transicionesPermitidas"]) == ["CANCELADA", "PAGADA"],
-        detalle["transicionesPermitidas"])
+revisar("las transiciones ofrecidas son las de su estado",
+        sorted(detalle["transicionesPermitidas"]) == SIGUIENTES[estadoInicial],
+        (estadoInicial, detalle["transicionesPermitidas"]))
 
 # Desde la orden se llega al cliente y al chat: sin el id, el panel solo puede
 # enseñar un nombre escrito a mano en el pedido.
@@ -441,30 +475,40 @@ revisar("y la orden ya apunta a ese hilo",
         detalle2["conversacionId"] == hilo["conversacion"]["id"],
         (detalle2.get("conversacionId"), hilo["conversacion"]["id"]))
 
-s, cuerpo, _ = pedir("PATCH", "/admin/ordenes/%d/estado" % idOrden, {"estado": "ENTREGADA"}, token=token)
+s, cuerpo, _ = pedir("PATCH", "/admin/ordenes/%d/estado" % idOrden,
+                     {"estado": SALTO[estadoInicial]}, token=token)
 revisar("saltarse un paso -> 422 INVALID_ORDER_TRANSITION",
         s == 422 and cuerpo["code"] == "INVALID_ORDER_TRANSITION", (s, cuerpo.get("code")))
 revisar("el error dice el estado actual y a dónde sí se puede ir",
-        cuerpo.get("estadoActual") == "PENDIENTE" and "PAGADA" in cuerpo.get("transicionesPermitidas", []),
+        cuerpo.get("estadoActual") == estadoInicial
+        and sorted(cuerpo.get("transicionesPermitidas", [])) == SIGUIENTES[estadoInicial],
         cuerpo)
 
-s, pagada, _ = pedir("PATCH", "/admin/ordenes/%d/estado" % idOrden, {"estado": "PAGADA"}, token=token)
-revisar("pendiente -> pagada", s == 200 and pagada["estado"] == "PAGADA", (s, pagada))
-revisar("registra quién la movió", pagada.get("actualizadoPor") == "admin", pagada.get("actualizadoPor"))
+# Un paso legítimo, el que toque desde donde esté.
+siguiente = [e for e in SIGUIENTES[estadoInicial] if e != "CANCELADA"][0]
+s, avanzada, _ = pedir("PATCH", "/admin/ordenes/%d/estado" % idOrden, {"estado": siguiente}, token=token)
+revisar("avanzar un paso", s == 200 and avanzada["estado"] == siguiente, (s, avanzada))
+revisar("registra quién la movió", avanzada.get("actualizadoPor") == "admin",
+        avanzada.get("actualizadoPor"))
 
 # Cancelar devuelve el stock: se compara el del producto antes y después.
-idProducto = detalle["items"][0]["productoId"]
-cantidad = detalle["items"][0]["cantidad"]
-s, antes, _ = pedir("GET", "/admin/productos/%d" % idProducto, token=token)
-s, cancelada, _ = pedir("PATCH", "/admin/ordenes/%d/estado" % idOrden, {"estado": "CANCELADA"}, token=token)
-revisar("pagada -> cancelada", s == 200 and cancelada["estado"] == "CANCELADA", s)
-s, despues, _ = pedir("GET", "/admin/productos/%d" % idProducto, token=token)
-revisar("cancelar devuelve el stock (RN-055)",
-        despues["stock"] == antes["stock"] + cantidad,
-        (antes["stock"], cantidad, despues["stock"]))
+# Desde ENVIADA ya no se puede cancelar, así que ese tramo solo corre cuando la
+# orden quedó en un estado que lo admite.
+if "CANCELADA" in SIGUIENTES.get(siguiente, []):
+    idProducto = detalle["items"][0]["productoId"]
+    cantidad = detalle["items"][0]["cantidad"]
+    s, antes, _ = pedir("GET", "/admin/productos/%d" % idProducto, token=token)
+    s, cancelada, _ = pedir("PATCH", "/admin/ordenes/%d/estado" % idOrden,
+                            {"estado": "CANCELADA"}, token=token)
+    revisar("cancelar una orden ya pagada", s == 200 and cancelada["estado"] == "CANCELADA", s)
+    s, despues, _ = pedir("GET", "/admin/productos/%d" % idProducto, token=token)
+    revisar("cancelar devuelve el stock (RN-055)",
+            despues["stock"] == antes["stock"] + cantidad,
+            (antes["stock"], cantidad, despues["stock"]))
 
-s, cuerpo, _ = pedir("PATCH", "/admin/ordenes/%d/estado" % idOrden, {"estado": "PAGADA"}, token=token)
-revisar("una cancelada ya no revive -> 422", s == 422, (s, cuerpo.get("code")))
+    s, cuerpo, _ = pedir("PATCH", "/admin/ordenes/%d/estado" % idOrden,
+                         {"estado": "PAGADA"}, token=token)
+    revisar("una cancelada ya no revive -> 422", s == 422, (s, cuerpo.get("code")))
 
 print("\n=== 13. Vistas de producto ===")
 s, ficha, _ = pedir("GET", "/productos/audifonos-bluetooth-pulse-x")

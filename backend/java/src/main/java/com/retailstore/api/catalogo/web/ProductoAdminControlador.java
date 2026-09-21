@@ -2,6 +2,7 @@ package com.retailstore.api.catalogo.web;
 
 import com.retailstore.api.catalogo.dto.ActualizarProductoPeticion;
 import com.retailstore.api.catalogo.dto.BusquedaProductoPeticion;
+import com.retailstore.api.catalogo.dto.CambiarDestacadoPeticion;
 import com.retailstore.api.catalogo.dto.CambiarEstadoPeticion;
 import com.retailstore.api.catalogo.dto.CrearProductoPeticion;
 import com.retailstore.api.catalogo.dto.ProductoAdminRespuesta;
@@ -76,6 +77,13 @@ public class ProductoAdminControlador {
     public ProductoAdminRespuesta cambiarEstado(@PathVariable Long id,
                                                 @Valid @RequestBody CambiarEstadoPeticion peticion) {
         return servicio.cambiarEstado(id, peticion.activo());
+    }
+
+    @PatchMapping("/{id}/destacado")
+    @Operation(summary = "Destacar en portada o quitar de destacados")
+    public ProductoAdminRespuesta cambiarDestacado(@PathVariable Long id,
+                                                   @Valid @RequestBody CambiarDestacadoPeticion peticion) {
+        return servicio.cambiarDestacado(id, peticion.destacado());
     }
 
     @DeleteMapping("/{id}")

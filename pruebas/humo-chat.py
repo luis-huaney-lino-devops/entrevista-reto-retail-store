@@ -133,20 +133,33 @@ print("\n=== 2. Chat por WebSocket ===")
 s, conversaciones = pedir("GET", "/admin/conversaciones", token=token)
 revisar("bandeja de conversaciones", s == 200 and conversaciones["totalItems"] >= 3, s)
 
-# Un hilo con pendientes, no el primero de la lista: la bandeja ordena por
-# actividad, asi que cualquier conversacion creada antes por otra prueba se
-# pondria delante y esta comprobacion pasaria a hablar de otra cosa.
-conPendientes = [c for c in conversaciones["items"] if c["noLeidos"] > 0]
-revisar("hay conversaciones sin leer", len(conPendientes) > 0,
-        [(c["asunto"], c["noLeidos"]) for c in conversaciones["items"][:5]])
-idConv = conPendientes[0]["id"]
+# La prueba se fabrica el pendiente en vez de buscarlo en la semilla: contar
+# con que quede alguno sin leer la hacia depender de que nadie hubiera abierto
+# la bandeja antes, ni siquiera la ejecucion anterior de esta misma prueba.
+idConv = conversaciones["items"][0]["id"]
 
 s, hilo = pedir("GET", "/admin/conversaciones/%d" % idConv, token=token)
-revisar("abrir el hilo devuelve sus mensajes", s == 200 and len(hilo["mensajes"]) >= 3, s)
-revisar("abrirlo lo marca leído", hilo["conversacion"]["noLeidos"] == 0,
-        hilo["conversacion"]["noLeidos"])
+revisar("abrir el hilo devuelve sus mensajes", s == 200 and len(hilo["mensajes"]) > 0, s)
+mensajesAntes = len(hilo["mensajes"])
 tokenHilo = hilo["tokenAcceso"]
 revisar("el panel recibe el token del hilo para el lado cliente", bool(tokenHilo))
+
+# El cliente escribe con el token del hilo: eso es lo que deja pendientes.
+s, _ = pedir("POST", "/conversaciones/%s/mensajes" % tokenHilo,
+             {"cuerpo": "Sigo esperando respuesta.", "adjuntoIds": []})
+revisar("el cliente puede escribir con el token del hilo", s == 201, s)
+
+s, bandeja = pedir("GET", "/admin/conversaciones", token=token)
+enBandeja = next(c for c in bandeja["items"] if c["id"] == idConv)
+revisar("el mensaje del cliente deja el hilo sin leer", enBandeja["noLeidos"] > 0, enBandeja)
+revisar("y lo sube al principio de la bandeja", bandeja["items"][0]["id"] == idConv,
+        [c["id"] for c in bandeja["items"][:3]])
+
+s, hilo = pedir("GET", "/admin/conversaciones/%d" % idConv, token=token)
+revisar("abrirlo lo marca leído", hilo["conversacion"]["noLeidos"] == 0,
+        hilo["conversacion"]["noLeidos"])
+revisar("y el mensaje nuevo está en el hilo", len(hilo["mensajes"]) == mensajesAntes + 1,
+        (mensajesAntes, len(hilo["mensajes"])))
 
 s, cuerpo = pedir("POST", "/admin/conversaciones/ticket-ws", {}, token=token)
 revisar("ticket de WebSocket", s == 200 and cuerpo["ticket"], (s, cuerpo))

@@ -264,7 +264,7 @@ backend**, que rechaza la petición aunque alguien escriba la URL a mano.
 | Sección | Operaciones |
 | --- | --- |
 | Tablero | Ventas por día, órdenes por estado, productos más vistos y más vendidos, stock bajo |
-| Productos | Listar con búsqueda por nombre o SKU, filtro por estado y orden; crear, editar, publicar y despublicar; galería con arrastrar y soltar; descripción con editor de texto |
+| Productos | Listar con búsqueda por nombre o SKU, filtro por estado y orden; crear, editar, publicar y despublicar; galería con arrastrar y soltar; descripción con editor de texto. Desde la propia fila: destacar en portada, publicar y eliminar, sin abrir el formulario |
 | Categorías | Crear, editar, ordenar, activar y desactivar. Con imagen |
 | Subcategorías | Igual, y mover una subcategoría a otra categoría. Con imagen |
 | Marcas | Crear, editar, activar y desactivar. Con logo |

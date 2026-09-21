@@ -71,8 +71,8 @@ Con la base y el backend en marcha:
   mismo WebSocket, y un aviso de stock se cierra solo al reponer (RN-089).
 
 Lo verifican dos pruebas de extremo a extremo contra PostgreSQL real:
-`pruebas/humo-api.py` (**123 comprobaciones**) y `pruebas/humo-chat.py`
-(**57**). Las dos son idempotentes: montan el escenario que necesitan en vez de
+`pruebas/humo-api.py` (**124 comprobaciones**) y `pruebas/humo-chat.py`
+(**60**). Las dos son idempotentes: montan el escenario que necesitan en vez de
 confiar en el estado que dejó la anterior.
 
 ---
