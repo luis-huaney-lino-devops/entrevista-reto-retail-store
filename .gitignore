@@ -27,4 +27,10 @@ __pycache__/
 # Almacén local de archivos subidos (imágenes y adjuntos del chat).
 # En producción vive en R2; en desarrollo son los bytes que suban las pruebas
 # y quien use el panel, y no son código.
-backend/java/datos/
+# Lo que sube quien usa el panel. Se ignoran las ramas concretas y no
+# `datos/` entero: git no puede volver a incluir algo dentro de un directorio
+# excluido, y las imágenes de la semilla —que sí son parte del proyecto,
+# porque sin ellas el catálogo arranca sin una sola foto— viven ahí al lado,
+# en `datos/archivos/semilla/`.
+backend/java/datos/archivos/productos/
+backend/java/datos/archivos/chat/

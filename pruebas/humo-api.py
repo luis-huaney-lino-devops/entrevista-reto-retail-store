@@ -83,7 +83,7 @@ def multipart(campos, archivo):
 print("=== 1. Catálogo público ===")
 s, productos, cab = pedir("GET", "/productos?tamanoPagina=5")
 revisar("GET /productos devuelve 200", s == 200, s)
-revisar("trae al menos los 28 productos de la semilla",
+revisar("la semilla trae un catálogo con fondo",
         productos and productos["totalItems"] >= 28,
         productos.get("totalItems") if productos else None)
 revisar("la página trae 5 elementos", productos and len(productos["items"]) == 5)
@@ -99,17 +99,22 @@ revisar("GET /categorias devuelve las categorías activas", s == 200 and len(men
 revisar("cada categoría trae sus subcategorías", menu and len(menu[0]["subcategorias"]) >= 3,
         len(menu[0]["subcategorias"]) if menu else None)
 
-s, detalle, _ = pedir("GET", "/productos/audifonos-bluetooth-pulse-x")
-revisar("detalle por slug", s == 200 and detalle["nombre"].startswith("Audífonos"), s)
+# El producto sale del listado y no de una constante: la prueba es del
+# endpoint, no de que la semilla contenga un artículo concreto.
+elegido = productos["items"][0]["slug"]
+s, detalle, _ = pedir("GET", "/productos/" + elegido)
+revisar("detalle por slug", s == 200 and detalle["slug"] == elegido, s)
 revisar("el detalle trae las 4 variantes de imagen",
-        detalle and detalle["imagenes"] and detalle["imagenes"][0]["miniatura"].endswith("160/160.webp"))
+        detalle and detalle["imagenes"]
+        and {"miniatura", "tarjeta", "detalle", "original"} <= set(detalle["imagenes"][0]),
+        detalle["imagenes"][:1] if detalle else None)
 revisar("el detalle trae la ruta categoría/subcategoría",
-        detalle and detalle["categoria"]["slug"] == "tecnologia"
-        and detalle["subcategoria"]["slug"] == "audio-tecnologia")
+        detalle and detalle["categoria"]["slug"] and detalle["subcategoria"]["slug"],
+        (detalle.get("categoria"), detalle.get("subcategoria")) if detalle else None)
 
-s, relacionados, _ = pedir("GET", "/productos/audifonos-bluetooth-pulse-x/relacionados")
+s, relacionados, _ = pedir("GET", "/productos/" + elegido + "/relacionados")
 revisar("relacionados excluye el producto actual",
-        s == 200 and all(p["slug"] != "audifonos-bluetooth-pulse-x" for p in relacionados))
+        s == 200 and all(p["slug"] != elegido for p in relacionados))
 
 s, cuerpo, _ = pedir("GET", "/productos?precioMinimo=500&precioMaximo=100")
 revisar("rango de precios invertido -> 422 INVALID_PRICE_RANGE",
@@ -120,8 +125,12 @@ revisar("orden desconocido -> 400 VALIDATION_ERROR",
         s == 400 and cuerpo["code"] == "VALIDATION_ERROR", (s, cuerpo.get("code")))
 
 s, cuerpo, _ = pedir("GET", "/productos?texto=%25")
+# Lo que dice RN-026 es que el comodín se escapa, no que no haya resultados:
+# si algún producto lleva un «%» en el texto —«Malla de 90%»— encontrarlo es
+# justo lo correcto. Lo que no puede pasar es que salga el catálogo entero.
 revisar("buscar '%' no devuelve el catálogo entero (RN-026)",
-        s == 200 and cuerpo["totalItems"] == 0, cuerpo.get("totalItems") if s == 200 else s)
+        s == 200 and cuerpo["totalItems"] < productos["totalItems"],
+        (cuerpo.get("totalItems"), productos["totalItems"]) if s == 200 else s)
 
 s, cuerpo, _ = pedir("GET", "/productos/no-existe")
 revisar("slug inexistente -> 404 PRODUCT_NOT_FOUND",
@@ -511,12 +520,21 @@ if "CANCELADA" in SIGUIENTES.get(siguiente, []):
     revisar("una cancelada ya no revive -> 422", s == 422, (s, cuerpo.get("code")))
 
 print("\n=== 13. Vistas de producto ===")
-s, ficha, _ = pedir("GET", "/productos/audifonos-bluetooth-pulse-x")
-s, antesVistas, _ = pedir("GET", "/admin/productos?texto=TEC-AUD-001", token=token)
+# Un producto cualquiera de la tienda, buscado en el panel por su SKU.
+s, enTienda, _ = pedir("GET", "/productos?tamanoPagina=1")
+slugFicha = enTienda["items"][0]["slug"]
+s, enPanel, _ = pedir("GET", "/admin/productos?" + urllib.parse.urlencode(
+    {"texto": enTienda["items"][0]["nombre"]}), token=token)
+skuFicha = enPanel["items"][0]["sku"]
+
+s, ficha, _ = pedir("GET", "/productos/" + slugFicha)
+s, antesVistas, _ = pedir("GET", "/admin/productos?" + urllib.parse.urlencode({"texto": skuFicha}),
+                          token=token)
 vistasAntes = antesVistas["items"][0]["vistas"]
-pedir("GET", "/productos/audifonos-bluetooth-pulse-x")
-pedir("GET", "/productos/audifonos-bluetooth-pulse-x")
-s, despuesVistas, _ = pedir("GET", "/admin/productos?texto=TEC-AUD-001", token=token)
+pedir("GET", "/productos/" + slugFicha)
+pedir("GET", "/productos/" + slugFicha)
+s, despuesVistas, _ = pedir("GET", "/admin/productos?" + urllib.parse.urlencode({"texto": skuFicha}),
+                            token=token)
 revisar("abrir la ficha en la tienda suma vistas",
         despuesVistas["items"][0]["vistas"] == vistasAntes + 2,
         (vistasAntes, despuesVistas["items"][0]["vistas"]))
