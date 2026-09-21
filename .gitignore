@@ -23,3 +23,8 @@ __pycache__/
 
 # Registros locales
 *.log
+
+# Almacén local de archivos subidos (imágenes y adjuntos del chat).
+# En producción vive en R2; en desarrollo son los bytes que suban las pruebas
+# y quien use el panel, y no son código.
+backend/java/datos/
