@@ -48,6 +48,14 @@ type AccionesCarrito = {
   quitarCupon: () => Promise<void>
   abrirPanel: () => void
   cerrarPanel: () => void
+  /**
+   * Tras confirmar la compra. **No es lo mismo que vaciar**: el carrito del
+   * servidor quedo `CONVERTIDO` y ya no admite cambios, asi que hay que soltar
+   * su id de `localStorage`. Si se conservara, la siguiente visita intentaria
+   * seguir comprando sobre un carrito muerto y cada accion respondria
+   * `CART_ALREADY_CONVERTED`.
+   */
+  vaciarTrasComprar: () => void
 }
 
 type EstadoPublico = EstadoCarrito & {
@@ -252,6 +260,13 @@ export function ProveedorCarrito({ children }: { children: ReactNode }) {
       quitarCupon: quitarCuponAccion,
       abrirPanel: () => setPanelAbierto(true),
       cerrarPanel: () => setPanelAbierto(false),
+      vaciarTrasComprar: () => {
+        borrarId()
+        // Se reinicia el estado en vez de despachar VACIAR: VACIAR conserva el
+        // id a proposito -vaciar un carrito no lo destruye- y aqui hace falta
+        // justo lo contrario.
+        despachar({ tipo: 'HIDRATADO', carrito: null })
+      },
     }),
     [agregar, fijarCantidad, quitar, aplicarCupon, quitarCuponAccion],
   )

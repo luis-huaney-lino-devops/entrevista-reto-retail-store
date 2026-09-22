@@ -111,11 +111,20 @@ function Resumen({ provisional }: { provisional: boolean }) {
 
       <p className="text-xs text-texto-suave">Precios con IGV incluido. El envio se calcula al confirmar el pedido.</p>
 
-      <Boton variante="primario" tamano="lg" className="w-full" disabled title="El checkout todavia no esta disponible">
+      {/* Se deshabilita mientras hay una mutacion en vuelo: confirmar con el
+          total todavia provisional llevaria al checkout con una cifra que el
+          servidor esta a punto de corregir. */}
+      <EnlaceBoton
+        href="/checkout"
+        variante="primario"
+        tamano="lg"
+        className="w-full"
+        aria-disabled={provisional || undefined}
+      >
         Continuar la compra
-      </Boton>
+      </EnlaceBoton>
       <p className="text-center text-xs text-texto-suave">
-        El pago aun no esta habilitado en esta demostracion.
+        No se piden datos de pago: el pedido se confirma y se coordina despues.
       </p>
 
       <Link

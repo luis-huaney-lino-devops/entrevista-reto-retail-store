@@ -15,7 +15,40 @@
 ![Docker](https://img.shields.io/badge/Docker-2496ED?style=for-the-badge&logo=docker&logoColor=white)
 ![nginx](https://img.shields.io/badge/nginx-009639?style=for-the-badge&logo=nginx&logoColor=white)
 
+**[Tienda](https://store.luis-alberto-huaney-lino.online)** ·
+**[Panel](https://admin-store.luis-alberto-huaney-lino.online)** ·
+**[API](https://api-store.luis-alberto-huaney-lino.online/swagger)**
+
 </div>
+
+---
+
+## Verlo funcionando
+
+Está desplegado. No hace falta instalar nada para probarlo:
+
+| | Enlace | Cómo entrar |
+| --- | --- | --- |
+| **Tienda** | [store.luis-alberto-huaney-lino.online](https://store.luis-alberto-huaney-lino.online) | Abierta. Se puede comprar **sin cuenta** (RN-063) |
+| **Panel** | [admin-store.luis-alberto-huaney-lino.online](https://admin-store.luis-alberto-huaney-lino.online) | `admin` / `AdminRetail2026!` |
+| **API** | [api-store.luis-alberto-huaney-lino.online/swagger](https://api-store.luis-alberto-huaney-lino.online/swagger) | Swagger, generado desde el código |
+| **Salud** | [/health](https://api-store.luis-alberto-huaney-lino.online/health) | — |
+
+### Un recorrido de cinco minutos
+
+1. En la **tienda**, añade un par de productos al carrito y aplica el cupón `BIENVENIDA10`
+   (10 % desde S/ 50). Fíjate en que el total lo recalcula el servidor en cada cambio.
+2. Pulsa **Continuar la compra**, rellena los datos y confirma. Llegas a `/pedido/ORD-…`
+   con el número del pedido.
+3. En el **panel**, entra en **Órdenes**: ahí está la que acabas de hacer. Cámbiala de
+   estado y comprueba que solo admite las transiciones válidas (RN-054).
+4. Desde esa orden, **abre una conversación** con quien compró. El chat va por WebSocket:
+   lo que escribas aparece al otro lado sin recargar.
+5. En **Productos**, despublica uno y mira cómo desaparece de la tienda pero sigue en el
+   panel. Bórralo y recupéralo desde la **Papelera** (RN-086: nada se borra de verdad).
+
+> Los tres dominios comparten dominio registrable a propósito: la cookie de refresco va
+> con `SameSite=Lax`, y desde otro dominio el navegador dejaría de mandarla.
 
 ---
 

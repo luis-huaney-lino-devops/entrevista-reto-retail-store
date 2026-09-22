@@ -98,6 +98,13 @@ services:
         NEXT_PUBLIC_URL_TIENDA: https://${DOMINIO_TIENDA}
         NEXT_PUBLIC_GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID:-}
         API_URL_INTERNO: http://retail-api:8080/api/v1
+        # De donde puede traer imagenes el optimizador de next/image. Con
+        # ALMACEN_TIPO=r2 las fotos NO salen del dominio de la API sino del
+        # bucket, y `next.config.mjs` arma `remotePatterns` con estas variables
+        # AL CONSTRUIR: si el host de R2 no esta aqui, next/image rechaza cada
+        # imagen y el catalogo sale vacio aunque la API devuelva la URL correcta.
+        # Con ALMACEN_TIPO=local se deja vacio y no sobra nada.
+        NEXT_PUBLIC_CDN_URL: ${NEXT_PUBLIC_CDN_URL:-}
     restart: unless-stopped
     environment:
       NODE_ENV: production

@@ -1,8 +1,9 @@
 import 'server-only'
 
-import { comoErrorApi } from './errores'
+import { comoErrorApi, ErrorApi } from './errores'
 import type {
   Carrito,
+  Pedido,
   Categoria,
   Marca,
   Opinion,
@@ -137,6 +138,27 @@ export function marcaPorSlug(slug: string, opciones?: Opciones) {
 
 export function carritoPorId(id: string) {
   return traer<Carrito>(`/carritos/${encodeURIComponent(id)}`, { revalidar: 0 })
+}
+
+/* ---------------------------------------------------------------- pedidos */
+
+/**
+ * Un pedido por su numero, para la pagina de confirmacion.
+ *
+ * `revalidar: 0` porque un pedido cambia de estado: cachearlo ensenaria
+ * "PENDIENTE" a quien vuelve a mirar despues de que se envio.
+ *
+ * Devuelve `null` en vez de lanzar cuando el numero no existe, para que la
+ * pagina responda `notFound()` en lugar de un error. Un numero mal copiado de
+ * un correo es un caso normal, no un fallo.
+ */
+export async function pedidoPorNumero(numero: string): Promise<Pedido | null> {
+  try {
+    return await traer<Pedido>(`/ordenes/${encodeURIComponent(numero)}`, { revalidar: 0 })
+  } catch (e) {
+    if (e instanceof ErrorApi && (e.estado === 404 || e.codigo === 'ORDER_NOT_FOUND')) return null
+    throw e
+  }
 }
 
 /**

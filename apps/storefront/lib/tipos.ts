@@ -290,3 +290,59 @@ export type FiltrosProductos = {
   pagina?: number
   tamanoPagina?: number
 }
+
+/* ------------------------------------------------------------------ pedidos */
+
+/**
+ * Una linea de pedido. Los datos estan **copiados** del producto, no
+ * referenciados (RN-052): una orden es un hecho ocurrido y tiene que seguir
+ * diciendo que se compro y a que precio aunque el producto cambie despues.
+ * Por eso hay `nombreProducto` y `precioUnitario` aqui, y no solo un id.
+ */
+export type LineaPedido = {
+  productoId: number
+  nombreProducto: string
+  sku: string
+  precioUnitario: number
+  cantidad: number
+  totalLinea: number
+}
+
+export type Pedido = {
+  id: number
+  numero: string
+  nombreContacto: string
+  email: string
+  telefono: string | null
+  direccion: string
+  subtotal: number
+  descuento: number
+  total: number
+  codigoCupon: string | null
+  estado: string
+  estadoEtiqueta: string
+  clienteId: number | null
+  clienteNombre: string | null
+  /** La conversacion abierta sobre este pedido, si ya hay una. */
+  conversacionId: number | null
+  transicionesPermitidas: string[]
+  items: LineaPedido[]
+  creadoEn: string
+  actualizadoEn: string | null
+  actualizadoPor: string | null
+}
+
+/**
+ * Lo que viaja al confirmar la compra.
+ *
+ * **No lleva ni un importe, y es deliberado** (RN-051): el servidor recalcula
+ * subtotal, descuento y total desde el carrito. Al no existir el campo, no hay
+ * forma de mandar un total aunque se quiera.
+ */
+export type CrearPedido = {
+  carritoId: string
+  nombreContacto: string
+  email: string
+  telefono?: string
+  direccion: string
+}
