@@ -3,8 +3,9 @@
 **Qué existe hoy y qué falta.** Este documento manda sobre cualquier otro en lo
 que respecta al estado: el resto de `docs/` describe el objetivo.
 
-Actualizado tras cerrar la identidad del cliente de la tienda: registro,
-acceso, acceso con Google, direcciones con ubigeo y favoritos.
+Actualizado tras construir la tienda pública en Next.js y el bloque de
+opiniones de producto, y tras corregir las imágenes de la semilla (`V003`) y
+el almacén en R2 (`V004`).
 
 ---
 
@@ -12,7 +13,7 @@ acceso, acceso con Google, direcciones con ubigeo y favoritos.
 
 | Bloque | Estado |
 | --- | --- |
-| Esquema en español con la convención `id_<tabla>` / `fk_id_<tabla>` | **Hecho** (`V001`–`V008`) |
+| Esquema en español con la convención `id_<tabla>` / `fk_id_<tabla>` | **Hecho** (`V001`; los datos de semilla en `V002`) |
 | Identidad del panel: acceso, JWT con audiencia, refresco rotativo, límite de intentos | **Hecho** |
 | Administradores: alta, edición, roles, restablecer contraseña | **Hecho** |
 | Marcas, categorías, subcategorías: CRUD y reglas de dependencia | **Hecho** |
@@ -22,19 +23,20 @@ acceso, acceso con Google, direcciones con ubigeo y favoritos.
 | Carrito de la tienda | **Hecho** |
 | Órdenes: consulta y cambio de estado desde el panel | **Hecho** |
 | Vistas de producto y tablero con gráficos | **Hecho** |
-| Eliminación lógica con papelera y restauración (RN-086) | **Hecho** (`V006`) |
-| Clientes: ficha, historial de compras, bloqueo desde el panel | **Hecho** (`V007`) |
-| Chat de atención al cliente por WebSocket, con adjuntos revisados | **Hecho** (`V008`) |
-| Notificaciones del panel, empujadas en vivo | **Hecho** (`V008`) |
+| Eliminación lógica con papelera y restauración (RN-086) | **Hecho** |
+| Clientes: ficha, historial de compras, bloqueo desde el panel | **Hecho** |
+| Chat de atención al cliente por WebSocket, con adjuntos revisados | **Hecho** |
+| Notificaciones del panel, empujadas en vivo | **Hecho** |
 | Panel de administración (React) | **Hecho** |
 | Identidad de la tienda: registro, acceso, Google, sesión con refresco rotativo | **Hecho** |
 | Ubigeo, direcciones del cliente y favoritos | **Hecho** |
+| Tienda pública (Next.js): portada, catálogo, ficha, carrito, cuenta | **Hecho** |
+| Opiniones de producto (RN-090 … RN-095) | **Hecho** |
 | Clientes: verificación de correo y recuperación de contraseña | **Falta** (necesita correo) |
-| Checkout: crear la orden desde la tienda | **Falta** |
+| **Checkout: crear la orden desde la tienda** | **Falta** |
 | Correo | **Falta** |
-| Tienda (Next.js) | **Falta** |
 
-**53 de las 68 reglas** del catálogo están implementadas. Las restantes
+**59 de las 74 reglas** del catálogo están implementadas. Las restantes
 pertenecen al checkout y al correo.
 
 > Ojo con la palabra «clientes»: la **tabla** `cliente` y todo lo que el panel
@@ -45,7 +47,7 @@ pertenecen al checkout y al correo.
 
 > Las órdenes están **a medias a propósito**: las tablas, la máquina de estados
 > y el panel están hechos; lo que falta es quien las crea, que es el checkout de
-> la tienda. El histórico de demostración lo siembra `V005` para que el tablero
+> la tienda. El histórico de demostración lo siembra `V002` para que el tablero
 > muestre datos reales desde el primer arranque.
 
 ---
@@ -112,9 +114,10 @@ anterior.
 | Direcciones y favoritos | RN-086 | `ServicioDireccion`, `ServicioFavorito`, `ServicioUbigeo` |
 | Imágenes | RN-070 … RN-075 | `InspectorImagen`, `ProcesadorImagen`, `ServicioArchivo` |
 | Órdenes | RN-053, RN-054, RN-055 | `Orden`, `EstadoOrden`, `ServicioOrden` |
-| Eliminación lógica | RN-007, RN-086, RN-087 | `EntidadEliminable`, `ServicioPapelera`, `V006`, `Confirmar.tsx` |
+| Eliminación lógica | RN-007, RN-086, RN-087 | `EntidadEliminable`, `ServicioPapelera`, `Confirmar.tsx` |
 | Chat y adjuntos | RN-088 | `ServicioChat`, `InspectorAdjunto`, `ManejadorChatWs` |
 | Notificaciones | RN-089 | `ServicioNotificacion`, `AvisosDeStock`, `uq_notificacion_pendiente` |
+| Opiniones | RN-090 … RN-095 | `Opinion`, `ServicioOpinion`, `uq_opinion_cliente_producto`, `SeccionOpiniones.tsx` |
 | Transversales | RN-080 … RN-085 | `ManejadorGlobalErrores`, `Correlacion`, `@Transactional`, `BigDecimal`, `Producto.vistas`, `RegistroSesionesWs` |
 
 ### Parciales, con su motivo
@@ -155,22 +158,18 @@ Diseño ya escrito: [`backend/correo.md`](backend/correo.md).
 
 ### Bloque 3 — Checkout
 
-Lo único que falta de las órdenes: **quién las crea**. Transacción que revalida
-todo, descuenta stock, incrementa el uso del cupón y **copia** nombres y
-precios en las líneas.
+**Es lo único que falta de las órdenes: quién las crea.** Transacción que
+revalida todo, descuenta stock, incrementa el uso del cupón y **copia** nombres
+y precios en las líneas —una orden no puede cambiar porque alguien edite el
+producto después—.
 
-Las tablas, la máquina de estados, el panel y la devolución de stock al
-cancelar ya están.
+Las tablas, la máquina de estados, el panel, la devolución de stock al cancelar
+y la tienda entera ya están. `ServicioOrden` lo dice en su Javadoc: «aquí no se
+crean; la orden nace en el checkout de la tienda, que todavía no existe».
 
 Reglas: RN-050, RN-051, RN-052, RN-056, RN-057, y cierra RN-042.
 
-### Bloque 4 — Tienda (Next.js)
-
-Portada, listado, ficha, carrito y checkout. SSR para el catálogo,
-cliente para el carrito.
-Diseño ya escrito: [`frontend/estandar-storefront.md`](frontend/estandar-storefront.md).
-
-### Bloque 5 — Fusión de carritos
+### Bloque 4 — Fusión de carritos
 
 RN-036: al iniciar sesión, el carrito anónimo se funde con el del cliente.
 Necesita clientes y carrito, los dos ya listos salvo el enlace
@@ -185,12 +184,12 @@ Cosas que funcionan y que conviene tener escritas.
 | # | Qué | Impacto |
 | --- | --- | --- |
 | D-1 | El límite de intentos vive en la memoria del proceso | Con varias instancias el límite se multiplica por el número de instancias. Se sustituye por Redis sin tocar quien lo usa |
-| D-2 | Las imágenes de la semilla apuntan a `picsum.photos` | No existen en el almacén. Son marcadores para que la tienda se vea poblada; una subida real las reemplaza |
+| D-2 | Las 604 imágenes de la semilla viajan **dentro de la imagen Docker** de la API | Con `ALMACEN_TIPO=local` se sirven desde `/archivos` y funcionan solas. Al pasar a R2 hay que subirlas al bucket a mano (`deploy/subir-semilla-r2.sh`): nadie las copia |
 | D-3 | No hay limpieza de objetos huérfanos en R2 | Una transacción que revierte tras subir deja objetos sin fila. Ocupan espacio y no rompen nada; falta la tarea programada de `archivos-imagenes.md` §5 |
 | D-4 | `contracts/openapi.yaml` se genera, no se escribe | El diseño se discute en `docs/`; el contrato refleja lo implementado. Hay que regenerarlo al cambiar un endpoint |
 | D-5 | Sin pruebas de integración con base de datos | Lo cubre `pruebas/humo-api.py`, que es una prueba de extremo a extremo y no corre en `mvn test`. Testcontainers cerraría el hueco |
 | D-6 | El contador de vistas es un `UPDATE` por visita | Con mucho tráfico es contención sobre la fila de los productos populares. La salida es acumular en memoria y volcar cada cierto tiempo, no quitar la métrica |
-| D-7 | El histórico de órdenes de `V005` es de demostración | Son datos sembrados, no ventas reales. En un despliegue de verdad esa migración no debería aplicarse |
+| D-7 | El histórico de órdenes de `V002` es de demostración | Son datos sembrados, no ventas reales. En un despliegue de verdad esa parte de la semilla no debería aplicarse |
 | D-8 | Las notificaciones son del equipo, no por administrador | Leerla la marca leída para todos. Es lo que se quiere con un equipo pequeño; cuando crezca se añade una tabla de lecturas sin tocar quien las produce |
 | D-9 | `InspectorAdjunto` **no es un antivirus** | Cubre las formas conocidas de que un PDF ejecute algo al abrirlo, no un fallo del lector. Por eso el PDF se sirve con `Content-Disposition: attachment` y `nosniff` |
 | D-10 | La papelera no caduca | Lo eliminado se queda ahí para siempre. Hace falta una política de retención antes de que la tabla crezca de verdad |
@@ -198,6 +197,7 @@ Cosas que funcionan y que conviene tener escritas.
 | D-12 | `contracts/openapi.yaml` no cubre todavía `/cuenta`, `/ubigeo` ni los favoritos | El contrato vive en el código y en Swagger (`/swagger`), que sí los sirve. Hay que regenerar el YAML — ver D-4 |
 | D-13 | La IP del limitador sale del **primer** valor de `X-Forwarded-For` | Si el proxy añade la IP real detrás de lo que mandó el cliente, el primer valor lo elige el cliente y el límite por IP se puede esquivar cambiando una cabecera. El límite por correo -que es el que protege la cuenta- no se esquiva así. Lo correcto es leer desde la derecha descartando los proxies conocidos; está igual en el panel y en la tienda |
 | D-15 | `humo-chat.py` da por hecho que el **primer** cliente de `GET /admin/clientes` tiene compras | La lista va por nombre ascendente, y desde que la tienda puede registrar clientes, cualquier cuenta nueva sin órdenes cuyo nombre ordene antes que «Ana Torres» tumba esas dos comprobaciones. Era seguro cuando los clientes solo venían de la semilla. El arreglo es elegir un cliente con `ordenes > 0` en vez de `items[0]`, y está en un archivo que esta tanda no podía tocar |
+| D-16 | `archivo.url_publica` guarda la URL **completa**, en vez de derivarla al leer | La URL es la clave más una base que depende del despliegue. Al estar persistida, cada cambio de almacén o de dominio deja las filas viejas apuntando a un sitio muerto y obliga a una migración nueva: ya van dos (`V003` y `V004`). El arreglo es que `ArchivoRespuesta` componga `base + clave` al construir la respuesta, y dejar de leer `archivo.getUrlPublica()` |
 | D-14 | `token_cliente` está en el esquema y sin mapear | Es la tabla de los tokens de un solo uso. No se mapea porque no hay endpoint que los consuma: llega con el bloque de verificación y recuperación |
 
 ### Defectos cerrados
