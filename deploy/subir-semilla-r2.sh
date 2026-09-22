@@ -68,9 +68,19 @@ echo "Subido. Comprobando una al azar..."
 # cachearla para siempre; de ahí el Cache-Control de arriba.
 MUESTRA="semilla/marca/cemento-andino-tarjeta.webp"
 if [ -n "${ALMACEN_URL_PUBLICA:-}" ]; then
-    CODIGO=$(curl -s -o /dev/null -w '%{http_code}' "$ALMACEN_URL_PUBLICA/$MUESTRA" || echo 000)
+    # El fallback va FUERA de la sustitución. Dentro, un `|| echo 000` se
+    # concatena a lo que curl ya imprimió y sale un "200000" que no compara
+    # con nada.
+    if ! CODIGO=$(curl -s -o /dev/null -w '%{http_code}' "$ALMACEN_URL_PUBLICA/$MUESTRA" 2>/dev/null); then
+        CODIGO=000
+    fi
     echo "GET $ALMACEN_URL_PUBLICA/$MUESTRA -> HTTP $CODIGO"
-    [ "$CODIGO" = "200" ] && echo "OK" || echo "Revisa que el bucket tenga acceso público habilitado."
+    if [ "$CODIGO" = "200" ]; then
+        echo "OK. Ahora redespliega en Dokploy para que Flyway aplique V004:"
+        echo "sin eso la API sigue devolviendo las URL viejas."
+    else
+        echo "Revisa que el bucket tenga el acceso público habilitado."
+    fi
 else
     echo "Define ALMACEN_URL_PUBLICA para comprobar el acceso público."
 fi
