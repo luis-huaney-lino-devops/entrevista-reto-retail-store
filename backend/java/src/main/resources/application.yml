@@ -15,6 +15,12 @@ spring:
           time_zone: UTC
   flyway:
     locations: classpath:db/migration
+    placeholders:
+      # V003 reconstruye las URL publicas de la semilla con este prefijo. Va
+      # aqui y no escrito en el SQL porque la URL depende del despliegue: en
+      # desarrollo es localhost y en produccion el dominio de la API. El mismo
+      # valor que usa ServicioArchivo para lo que se sube desde el panel.
+      urlarchivos: ${ALMACEN_URL_PUBLICA:http://localhost:8080/archivos}
   mvc:
     problemdetails:
       enabled: true
