@@ -34,3 +34,7 @@ __pycache__/
 # en `datos/archivos/semilla/`.
 backend/java/datos/archivos/productos/
 backend/java/datos/archivos/chat/
+
+# Volcado del arbol de archivos. Se regenera cuando hace falta y no es
+# codigo: en el repositorio solo es ruido que envejece mal.
+estructura.txt
