@@ -31,10 +31,12 @@ ARG API_URL_INTERNO
 ENV NEXT_PUBLIC_API_URL=$NEXT_PUBLIC_API_URL \
     NEXT_PUBLIC_URL_TIENDA=$NEXT_PUBLIC_URL_TIENDA \
     NEXT_PUBLIC_GOOGLE_CLIENT_ID=$NEXT_PUBLIC_GOOGLE_CLIENT_ID \
+    NEXT_PUBLIC_CDN_URL=$NEXT_PUBLIC_CDN_URL \
     API_URL_INTERNO=$API_URL_INTERNO \
     NEXT_TELEMETRY_DISABLED=1
 
-# next.config.mjs lee NEXT_PUBLIC_API_URL y API_URL_INTERNO aqui para autorizar
+# next.config.mjs lee NEXT_PUBLIC_API_URL, NEXT_PUBLIC_CDN_URL y API_URL_INTERNO
+# aqui para autorizar
 # los hosts de next/image (remotePatterns). Si faltan, las fotos del catalogo
 # salen en 400 desde el optimizador y no hay error que lo explique.
 RUN npm run build
