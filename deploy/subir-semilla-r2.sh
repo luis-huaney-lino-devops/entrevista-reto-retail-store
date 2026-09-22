@@ -20,13 +20,25 @@ set -euo pipefail
 # esto, /data se convierte en C:/Program Files/... y el montaje falla.
 export MSYS_NO_PATHCONV=1
 
-: "${R2_ACCESS_KEY_ID:?falta R2_ACCESS_KEY_ID}"
+AQUI="$(cd "$(dirname "$0")" && pwd)"
+
+# Las credenciales pueden venir del entorno o de deploy/.env.r2, que .gitignore
+# excluye. Lo segundo evita que el secreto quede en el historial del shell.
+if [ -f "$AQUI/.env.r2" ]; then
+    echo "Leyendo credenciales de deploy/.env.r2"
+    set -a
+    # shellcheck disable=SC1091
+    . "$AQUI/.env.r2"
+    set +a
+fi
+
+: "${R2_ACCESS_KEY_ID:?falta R2_ACCESS_KEY_ID (ponlo en deploy/.env.r2 o en el entorno)}"
 : "${R2_SECRET_ACCESS_KEY:?falta R2_SECRET_ACCESS_KEY}"
 
 R2_ENDPOINT="${R2_ENDPOINT:-https://6c1db82f0c64bb2d7721120af8ac674c.r2.cloudflarestorage.com}"
 R2_BUCKET="${R2_BUCKET:-hidro-jass}"
 
-RAIZ="$(cd "$(dirname "$0")/.." && pwd)"
+RAIZ="$(cd "$AQUI/.." && pwd)"
 SEMILLA="$RAIZ/backend/java/datos/archivos/semilla"
 
 [ -d "$SEMILLA" ] || { echo "No encuentro $SEMILLA" >&2; exit 1; }
