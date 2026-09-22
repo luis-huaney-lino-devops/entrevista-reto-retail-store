@@ -32,12 +32,16 @@ el almacén en R2 (`V004`).
 | Ubigeo, direcciones del cliente y favoritos | **Hecho** |
 | Tienda pública (Next.js): portada, catálogo, ficha, carrito, cuenta | **Hecho** |
 | Opiniones de producto (RN-090 … RN-095) | **Hecho** |
-| Clientes: verificación de correo y recuperación de contraseña | **Falta** (necesita correo) |
-| **Checkout: crear la orden desde la tienda** | **Falta** |
-| Correo | **Falta** |
+| **Checkout: crear la orden desde la tienda** (RN-050 … RN-057) | **Hecho** |
+| Correo saliente por Resend, fuera de la petición y tras el commit | **Hecho** |
+| Verificación de correo y recuperación de contraseña (RN-063, RN-066) | **Hecho** |
 
-**59 de las 74 reglas** del catálogo están implementadas. Las restantes
-pertenecen al checkout y al correo.
+De las **74 reglas** del catálogo quedan cuatro sin cerrar del todo, y ninguna
+impide usar la tienda de punta a punta: **RN-036** (fusión de carritos al
+iniciar sesión), **RN-063** a medias (el enlace de verificación existe; la API
+todavía no bloquea a quien no verificó), **RN-065** (falta desvincular Google) y
+**RN-070** a medias (AVIF se rechaza porque la JVM no trae decodificador).
+Cada una está explicada abajo con su motivo.
 
 > Ojo con la palabra «clientes»: la **tabla** `cliente` y todo lo que el panel
 > hace con ella —ficha, historial, bloqueo, conversaciones— están hechos, y
@@ -45,10 +49,9 @@ pertenecen al checkout y al correo.
 > tienda. Lo que falta de identidad es lo que **necesita correo**: verificar la
 > dirección (RN-063) y recuperar la contraseña (RN-066).
 
-> Las órdenes están **a medias a propósito**: las tablas, la máquina de estados
-> y el panel están hechos; lo que falta es quien las crea, que es el checkout de
-> la tienda. El histórico de demostración lo siembra `V002` para que el tablero
-> muestre datos reales desde el primer arranque.
+> El histórico de órdenes de demostración lo siembra `V002` para que el tablero
+> muestre datos reales desde el primer arranque. Desde el checkout, las órdenes
+> nuevas las crea `ServicioCheckout` sobre esas mismas tablas.
 
 ---
 
@@ -117,6 +120,9 @@ anterior.
 | Eliminación lógica | RN-007, RN-086, RN-087 | `EntidadEliminable`, `ServicioPapelera`, `Confirmar.tsx` |
 | Chat y adjuntos | RN-088 | `ServicioChat`, `InspectorAdjunto`, `ManejadorChatWs` |
 | Notificaciones | RN-089 | `ServicioNotificacion`, `AvisosDeStock`, `uq_notificacion_pendiente` |
+| Checkout | RN-050, RN-051, RN-052, RN-056, RN-057, y cierra RN-042 | `ServicioCheckout`, `GeneradorNumeroOrden`, `CrearOrdenPeticion` |
+| Correo | RN-083 (ahora también el correo) | `ServicioCorreo`, `CorreoTrasCommit`, `PlantillasCorreo` |
+| Tokens por correo | RN-063, RN-066 | `TokenCliente`, `ServicioTokenCliente`, `ServicioRecuperacion` |
 | Opiniones | RN-090 … RN-095 | `Opinion`, `ServicioOpinion`, `uq_opinion_cliente_producto`, `SeccionOpiniones.tsx` |
 | Transversales | RN-080 … RN-085 | `ManejadorGlobalErrores`, `Correlacion`, `@Transactional`, `BigDecimal`, `Producto.vistas`, `RegistroSesionesWs` |
 
@@ -124,56 +130,33 @@ anterior.
 
 | Regla | Qué falta | Por qué |
 | --- | --- | --- |
-| RN-042 (límite de usos del cupón) | Nadie incrementa `usos_actuales` | Se incrementa al **confirmar la compra**, y no hay checkout todavía. `Cupon.registrarUso()` ya existe y está probado |
 | RN-070 (validar por contenido) | AVIF se rechaza en lugar de aceptarse | La JVM no trae decodificador de AVIF. Aceptarlo a medias sería peor: se rechaza con un mensaje claro |
-| RN-061 (el registro no revela si el correo existe) | El correo «alguien intentó registrarse con tu correo» no se envía | La respuesta ya es idéntica en código, cuerpo y tiempo -se gasta el BCrypt en los dos caminos-. Lo que falta es el aviso al dueño legítimo, y necesita el bloque de correo |
-| RN-063 (comprar no exige verificar el correo) | La mitad que **sí** exige verificación -cambiar la contraseña, ver el historial- no se aplica | No hay forma de verificar: el endpoint de verificación y el correo llegan con el bloque 2. Exigirlo hoy dejaría a todo el mundo sin poder cambiar su contraseña |
+| RN-063 (comprar no exige verificar el correo) | Existe el enlace de verificación; **la API todavía no bloquea** cambiar contraseña ni ver el historial a quien no verificó | La tienda ya lo avisa y ofrece reenviar. Aplicar el bloqueo en el servidor es una línea en cada endpoint, y se deja para cuando haya cuentas verificadas de verdad en producción |
 | RN-064 (vinculación solo con correo verificado) | Se aplica además al **crear**, no solo al vincular | Una cuenta creada por Google nace con `emailVerificado = true`; crearla con un correo que Google no verificó sería marcar como verificado algo que nadie verificó, y ocupar el correo de otra persona. Es más estricto que la tabla de `autenticacion.md` §4 a propósito |
 | RN-065 (nunca sin forma de entrar) | Solo la mitad de «establecer contraseña»; falta desvincular Google | No hay endpoint de desvinculación en el contrato de la tienda. Cuando lo haya, es donde entra `LAST_LOGIN_METHOD` |
-| RN-083 (efectos externos tras el commit) | Solo cubre el WebSocket | El correo todavía no existe. Las difusiones del chat y de las notificaciones sí van tras el commit (`RegistroSesionesWs.enviar`), y eso arregló un `409` por bloqueo optimista. La subida a R2 sigue yendo **antes** a propósito: así no queda una fila apuntando a un objeto inexistente |
+| RN-083 (efectos externos tras el commit) | Ya cubre WebSocket **y correo** `CorreoTrasCommit` registra el envío en `afterCommit`. Las difusiones del chat y de las notificaciones sí van tras el commit (`RegistroSesionesWs.enviar`), y eso arregló un `409` por bloqueo optimista. La subida a R2 sigue yendo **antes** a propósito: así no queda una fila apuntando a un objeto inexistente |
 
 ---
 
-## 4. Lo que falta, en orden
+## 4. Lo que falta
 
-El orden no es arbitrario: cada bloque necesita el anterior.
+Poco, y nada que impida usar la tienda de punta a punta.
 
-### Bloque 1 — Verificación de correo y recuperación de contraseña
+### RN-065 — desvincular Google
 
-Lo único que queda de la identidad del cliente, y va después del correo porque
-**es** correo: el enlace de verificación (RN-063) y el de recuperación
-(RN-066), los dos sobre la tabla `token_cliente`, que hoy no está mapeada
-porque ningún endpoint la usaría.
+Falta el endpoint de desvinculación en el contrato de la tienda. Cuando exista,
+es donde entra `LAST_LOGIN_METHOD`: no se puede quitar la identidad externa a
+quien no tiene contraseña, ni la contraseña a quien no tiene identidad externa.
 
-Reglas: RN-063 (la mitad que exige verificación), RN-066.
-Diseño ya escrito: [`backend/autenticacion.md`](backend/autenticacion.md) §3 y §5.
+### Exigir correo verificado donde toca (la otra mitad de RN-063)
 
-### Bloque 2 — Correo
+El enlace de verificación ya existe y la tienda ya lo ofrece. Falta que la API
+rechace cambiar la contraseña y listar el historial a quien no verificó.
 
-Plantillas, envío asíncrono, Mailpit en desarrollo. Va después de clientes
-porque su primer uso es el correo de verificación.
+### Fusión de carritos (RN-036)
 
-Regla: RN-083.
-Diseño ya escrito: [`backend/correo.md`](backend/correo.md).
-
-### Bloque 3 — Checkout
-
-**Es lo único que falta de las órdenes: quién las crea.** Transacción que
-revalida todo, descuenta stock, incrementa el uso del cupón y **copia** nombres
-y precios en las líneas —una orden no puede cambiar porque alguien edite el
-producto después—.
-
-Las tablas, la máquina de estados, el panel, la devolución de stock al cancelar
-y la tienda entera ya están. `ServicioOrden` lo dice en su Javadoc: «aquí no se
-crean; la orden nace en el checkout de la tienda, que todavía no existe».
-
-Reglas: RN-050, RN-051, RN-052, RN-056, RN-057, y cierra RN-042.
-
-### Bloque 4 — Fusión de carritos
-
-RN-036: al iniciar sesión, el carrito anónimo se funde con el del cliente.
-Necesita clientes y carrito, los dos ya listos salvo el enlace
-`carrito.fk_id_cliente`.
+Al iniciar sesión, el carrito anónimo debería fundirse con el del cliente.
+Necesita el enlace `carrito.fk_id_cliente`, que es lo único que falta.
 
 ---
 
