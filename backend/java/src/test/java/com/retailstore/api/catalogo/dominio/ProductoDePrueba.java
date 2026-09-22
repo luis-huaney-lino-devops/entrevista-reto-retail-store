@@ -33,6 +33,31 @@ public final class ProductoDePrueba {
                 subcategoria, new BigDecimal(precio), 100);
     }
 
+    /**
+     * Un producto persistido y <strong>publicado</strong>: el estado en el que
+     * un producto puede llegar de verdad a un carrito.
+     *
+     * <p>Marca `activo` por reflexión en vez de llamar a {@code activar()}
+     * porque publicar exige al menos una imagen (RN-075), y montar una galería
+     * completa en cada prueba de carrito o de checkout añadiría ruido sin
+     * probar nada de lo que esas pruebas miran.
+     */
+    public static Producto publicado(Long id, String precio) {
+        Producto producto = conId(id, precio);
+        marcarActivo(producto);
+        return producto;
+    }
+
+    public static void marcarActivo(Producto producto) {
+        try {
+            Field campo = Producto.class.getDeclaredField("activo");
+            campo.setAccessible(true);
+            campo.set(producto, true);
+        } catch (ReflectiveOperationException ex) {
+            throw new IllegalStateException("No se pudo marcar el producto como activo en la prueba", ex);
+        }
+    }
+
     public static void asignarId(Producto producto, Long id) {
         try {
             Field campo = Producto.class.getDeclaredField("id");

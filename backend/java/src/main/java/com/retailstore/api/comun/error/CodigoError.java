@@ -71,6 +71,8 @@ public enum CodigoError {
     COUPON_MIN_NOT_MET(HttpStatus.UNPROCESSABLE_ENTITY, "No se alcanza el mínimo del cupón"),
     COUPON_EXHAUSTED(HttpStatus.UNPROCESSABLE_ENTITY, "Cupón agotado"),
     INVALID_ORDER_TRANSITION(HttpStatus.UNPROCESSABLE_ENTITY, "Cambio de estado no permitido"),
+    CART_EMPTY(HttpStatus.UNPROCESSABLE_ENTITY, "El carrito está vacío"),
+    CART_ALREADY_CONVERTED(HttpStatus.UNPROCESSABLE_ENTITY, "El carrito ya se convirtió en orden"),
     UNSUPPORTED_IMAGE_TYPE(HttpStatus.UNPROCESSABLE_ENTITY, "Tipo de imagen no admitido"),
     UNSUPPORTED_ATTACHMENT_TYPE(HttpStatus.UNPROCESSABLE_ENTITY, "Tipo de adjunto no admitido"),
     DANGEROUS_ATTACHMENT(HttpStatus.UNPROCESSABLE_ENTITY, "Adjunto potencialmente peligroso"),

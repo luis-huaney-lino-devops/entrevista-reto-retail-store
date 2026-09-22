@@ -17,6 +17,15 @@ public interface OrdenRepositorio extends JpaRepository<Orden, Long> {
     @EntityGraph(attributePaths = {"items", "items.producto"})
     Optional<Orden> findConItemsById(Long id);
 
+    /**
+     * La confirmación de la tienda busca por número, no por id: el id es
+     * correlativo y delataría los pedidos de otros (RN-057).
+     */
+    @EntityGraph(attributePaths = {"items", "items.producto"})
+    Optional<Orden> findConItemsByNumero(String numero);
+
+    boolean existsByNumero(String numero);
+
     Page<Orden> findAllByOrderByCreadoEnDesc(Pageable paginacion);
 
     Page<Orden> findByEstadoOrderByCreadoEnDesc(EstadoOrden estado, Pageable paginacion);

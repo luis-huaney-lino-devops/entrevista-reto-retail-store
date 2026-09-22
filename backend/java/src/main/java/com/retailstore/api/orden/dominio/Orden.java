@@ -86,7 +86,51 @@ public class Orden extends EntidadAuditable {
         // requerido por JPA
     }
 
+    /**
+     * Nace de un carrito confirmado.
+     *
+     * <p>Los importes llegan ya calculados por el servidor (RN-051) y aquí no
+     * se recalculan ni se validan contra nada que venga del cliente: el
+     * constructor es privado al paquete de quien confirma, y ningún DTO de
+     * entrada lleva dinero.
+     *
+     * <p>El contacto se <strong>copia</strong> aunque haya cliente (RN-052):
+     * una orden es un hecho ocurrido y tiene que seguir diciendo a dónde se
+     * mandó aunque mañana esa persona cambie su dirección o borre la cuenta.
+     */
+    public Orden(String numero, Cliente cliente, String nombreContacto, String email,
+                 String telefono, String direccion, BigDecimal subtotal,
+                 BigDecimal descuento, BigDecimal total, String codigoCupon) {
+        this.numero = numero;
+        this.cliente = cliente;
+        this.nombreContacto = nombreContacto;
+        this.email = email;
+        this.telefono = telefono;
+        this.direccion = direccion;
+        this.subtotal = subtotal;
+        this.descuento = descuento;
+        this.total = total;
+        this.codigoCupon = codigoCupon;
+    }
+
     // ----- reglas de dominio -----
+
+    /**
+     * Añade una línea con los datos del producto <strong>copiados</strong>
+     * (RN-052). Lo hace {@code ItemOrden} en su constructor.
+     *
+     * <p>Solo tiene sentido mientras la orden se está creando. Después, los
+     * importes son inmutables (RN-053) y añadir una línea los dejaría sin
+     * cuadrar con el total ya escrito.
+     */
+    public void agregarLinea(ItemOrden linea) {
+        if (id != null) {
+            throw new IllegalStateException(
+                    "No se pueden añadir líneas a una orden ya persistida: sus importes son inmutables (RN-053).");
+        }
+        linea.asignarA(this);
+        items.add(linea);
+    }
 
     /**
      * Cambia de estado si la transición es válida (RN-054).
