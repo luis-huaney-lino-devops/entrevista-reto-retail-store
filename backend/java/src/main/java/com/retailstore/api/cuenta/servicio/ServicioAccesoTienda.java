@@ -3,6 +3,7 @@ package com.retailstore.api.cuenta.servicio;
 import com.retailstore.api.cliente.dominio.Cliente;
 import com.retailstore.api.cliente.repositorio.ClienteRepositorio;
 import com.retailstore.api.comun.error.CodigoError;
+import com.retailstore.api.correo.servicio.CorreoTrasCommit;
 import com.retailstore.api.comun.error.ExcepcionAplicacion;
 import com.retailstore.api.comun.limite.LimitadorIntentos;
 import com.retailstore.api.cuenta.dominio.TokenRefrescoCliente;
@@ -87,6 +88,7 @@ public class ServicioAccesoTienda {
     private final LimitadorIntentos limitePorEmail;
     private final LimitadorIntentos limitePorIp;
     private final LimitadorIntentos limiteRegistroPorIp;
+    private final CorreoTrasCommit correo;
     private final RevocacionInmediataCliente revocacion;
 
     public ServicioAccesoTienda(ClienteRepositorio clientes,
@@ -95,7 +97,8 @@ public class ServicioAccesoTienda {
                                 ServicioJwt jwt,
                                 PropiedadesJwt propiedades,
                                 Clock reloj,
-                                RevocacionInmediataCliente revocacion) {
+                                RevocacionInmediataCliente revocacion,
+                                CorreoTrasCommit correo) {
         this.clientes = clientes;
         this.tokensRefresco = tokensRefresco;
         this.codificador = codificador;
@@ -103,6 +106,7 @@ public class ServicioAccesoTienda {
         this.propiedades = propiedades;
         this.reloj = reloj;
         this.revocacion = revocacion;
+        this.correo = correo;
         this.limitePorEmail = new LimitadorIntentos(MAXIMO_ACCESO_POR_EMAIL, VENTANA_ACCESO, reloj);
         this.limitePorIp = new LimitadorIntentos(MAXIMO_ACCESO_POR_IP, VENTANA_ACCESO, reloj);
         this.limiteRegistroPorIp = new LimitadorIntentos(MAXIMO_REGISTRO_POR_IP, VENTANA_REGISTRO, reloj);
@@ -127,8 +131,13 @@ public class ServicioAccesoTienda {
         // significa «ese correo ya tiene cuenta».
         String hash = codificador.encode(peticion.contrasena());
 
-        if (clientes.findByEmail(email).isPresent()) {
+        var existente = clientes.findByEmail(email);
+        if (existente.isPresent()) {
             log.info("Registro sobre un correo ya existente. No se modifica nada (RN-061).");
+            // La otra mitad de RN-061: la respuesta no revela que el correo
+            // existe, y quien sí lo tiene se entera por aquí en vez de quedarse
+            // sin saber por qué «su» alta no llegó.
+            correo.intentoDeRegistroDuplicado(email, existente.get().getNombre());
             return;
         }
 
@@ -137,6 +146,10 @@ public class ServicioAccesoTienda {
         // save() y no flush(): es una entidad nueva y nadie la ha metido en la
         // sesión todavía. Un flush() a secas no escribiría nada.
         clientes.save(cliente);
+
+        // Tras el commit: si algo revienta después, no queda alguien con un
+        // correo de bienvenida a una cuenta que no existe.
+        correo.bienvenida(cliente.getEmail(), cliente.getNombre());
     }
 
     public SesionEmitida acceder(String emailPresentado, String contrasena, String ip) {
