@@ -56,7 +56,15 @@ services:
 
       ALMACEN_TIPO: ${ALMACEN_TIPO:-local}
       ALMACEN_DIRECTORIO: /app/datos/archivos
-      ALMACEN_URL_PUBLICA: https://${DOMINIO_API}/archivos
+      # De donde cuelgan las URL publicas de las imagenes. Por defecto la sirve
+      # la propia API en /archivos, que es lo correcto con ALMACEN_TIPO=local.
+      #
+      # TIENE que ser sobrescribible: con ALMACEN_TIPO=r2 las fotos salen del
+      # bucket y no de la API. Estaba escrito a fuego, y eso hacia que el valor
+      # puesto en el entorno del servicio se ignorara en silencio -incluido el
+      # que lee el marcador de Flyway-, asi que la migracion que "arreglaba" las
+      # URL las reescribia al mismo valor roto.
+      ALMACEN_URL_PUBLICA: ${ALMACEN_URL_PUBLICA:-https://${DOMINIO_API}/archivos}
       R2_ENDPOINT: ${R2_ENDPOINT:-}
       R2_BUCKET: ${R2_BUCKET:-}
       R2_ACCESS_KEY_ID: ${R2_ACCESS_KEY_ID:-}
