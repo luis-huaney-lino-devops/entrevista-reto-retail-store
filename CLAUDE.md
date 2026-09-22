@@ -93,12 +93,14 @@ está construida.
 ### Pruebas de extremo a extremo
 
 Las tres necesitan la API levantada y son **idempotentes**: se pueden repetir
-sobre la misma base sin limpiarla.
+sobre la misma base sin limpiarla. Lo que se mira es **`FALLAN 0`**, no el
+total: en `humo-api.py` el tramo de cancelación solo corre si la orden que le
+toca admite `CANCELADA`, así que el recuento baja a 125 cuando no corre.
 
 ```bash
-python pruebas/humo-api.py     # 127 comprobaciones: catálogo, panel, órdenes, tablero
+python pruebas/humo-api.py     # 125-128 comprobaciones: catálogo, panel, órdenes, tablero
 python pruebas/humo-chat.py    # 60: chat por WebSocket, adjuntos, notificaciones, papelera
-python pruebas/humo-cuenta.py  # 105: ubigeo, cuenta, Google, direcciones, favoritos
+python pruebas/humo-cuenta.py  # 108: ubigeo, cuenta, Google, direcciones, favoritos
 ```
 
 Merecen la pena: han encontrado **seis** defectos que ninguna prueba unitaria

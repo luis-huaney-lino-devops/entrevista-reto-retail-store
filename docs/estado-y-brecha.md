@@ -86,9 +86,15 @@ Con la base y el backend en marcha:
   se puede pulsar dos veces sin que pase nada.
 
 Lo verifican tres pruebas de extremo a extremo contra PostgreSQL real:
-`pruebas/humo-api.py` (**127 comprobaciones**), `pruebas/humo-chat.py` (**60**)
-y `pruebas/humo-cuenta.py` (**105**). Las tres son idempotentes: montan el
-escenario que necesitan en vez de confiar en el estado que dejó la anterior.
+`pruebas/humo-api.py` (**125-128 comprobaciones**), `pruebas/humo-chat.py`
+(**60**) y `pruebas/humo-cuenta.py` (**108**). Las tres son idempotentes:
+montan el escenario que necesitan en vez de confiar en el estado que dejó la
+anterior.
+
+> El total de `humo-api.py` no es fijo y no es un fallo: su tramo de
+> cancelación solo corre si la orden que le toca admite `CANCELADA`, y las
+> ejecuciones repetidas van dejando las órdenes sembradas en estados que ya no
+> lo admiten. Lo que hay que mirar es `FALLAN 0`.
 
 ---
 

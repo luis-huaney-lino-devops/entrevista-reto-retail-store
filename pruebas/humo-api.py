@@ -333,8 +333,14 @@ idc = carrito["id"]
 
 s, carrito, _ = pedir("POST", "/carritos/%s/items" % idc, {"productoId": producto["id"], "cantidad": 2})
 revisar("agregar al carrito", s == 200 and carrito["totalUnidades"] == 2, (s, carrito))
-revisar("el subtotal lo calcula el servidor", carrito and carrito["subtotal"] == 299.80,
-        carrito.get("subtotal") if carrito else None)
+revisar("el subtotal lo calcula el servidor",
+        carrito and carrito["subtotal"] == round(producto["precio"] * 2, 2),
+        (carrito.get("subtotal") if carrito else None, producto["precio"]))
+# El identificador de la línea lo asigna la base al insertar: sin volcar antes
+# de mapear salía null, y con null no hay con qué llamar a PATCH ni a DELETE.
+revisar("la línea nueva vuelve con su id, no con null",
+        carrito and carrito["items"] and carrito["items"][0]["id"] is not None,
+        carrito["items"][0] if carrito and carrito["items"] else None)
 
 s, cuerpo, _ = pedir("POST", "/carritos/%s/items" % idc, {"productoId": producto["id"], "cantidad": 50})
 revisar("superar el stock acumulado -> 409 INSUFFICIENT_STOCK",

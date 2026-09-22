@@ -106,6 +106,14 @@ public class ServicioCarrito {
     // ------------------------------------------------------------------ apoyo
 
     private CarritoRespuesta respuesta(Carrito carrito) {
+        // Volcar antes de mapear. La línea que se acaba de agregar es una
+        // entidad nueva y su identificador lo asigna la base al insertar, no al
+        // añadirla a la colección: sin esto la respuesta del POST devolvía
+        // `"id": null` y el carrito quedaba inmodificable —no hay con qué
+        // llamar a PATCH ni a DELETE— hasta que el cliente volviera a pedirlo.
+        // En las lecturas la transacción es de solo lectura y esto no hace nada.
+        carritos.flush();
+
         PrecioCarrito precio = calculadora.calcular(carrito);
         return new CarritoRespuesta(
                 carrito.getId(),

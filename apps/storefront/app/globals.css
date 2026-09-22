@@ -1,0 +1,126 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/*
+ * Estilos globales de la tienda.
+ *
+ * Casi todo el color vive en `tailwind.config.ts`; aqui queda lo que Tailwind
+ * no cubre bien: la tipografia base, el foco visible y el bloque de Markdown de
+ * la ficha de producto.
+ */
+
+:root {
+  --fuente-base: 'Inter', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  --fuente-marca: 'Montserrat', system-ui, -apple-system, 'Segoe UI', sans-serif;
+}
+
+@layer base {
+  html {
+    scroll-behavior: smooth;
+  }
+
+  body {
+    @apply bg-superficie-fondo font-base text-[15px] leading-relaxed text-texto antialiased;
+  }
+
+  h1,
+  h2,
+  h3,
+  h4 {
+    @apply font-marca tracking-tight;
+  }
+
+  /*
+   * El foco siempre visible. Va en azul tinta y no en naranja porque el naranja
+   * sobre blanco ronda 3:1 de contraste, que no llega.
+   */
+  :focus-visible {
+    @apply outline outline-2 outline-offset-2 outline-tinta-claro;
+  }
+
+  /* Los importes se leen mejor con cifras de ancho fijo: las columnas cuadran
+     y el numero no baila al cambiar una cantidad. */
+  .cifra {
+    font-variant-numeric: tabular-nums;
+  }
+}
+
+@layer components {
+  /* Enlace de salto al contenido: invisible hasta que recibe el foco. */
+  .salto-contenido {
+    @apply sr-only focus:not-sr-only focus:fixed focus:left-3 focus:top-3 focus:z-[100] focus:rounded-marca focus:bg-tinta focus:px-4 focus:py-2 focus:text-sm focus:font-semibold focus:text-white;
+  }
+
+  /*
+   * La descripcion del producto llega en Markdown desde la API. Este bloque es
+   * todo lo que hace falta para pintarla: no se trae un plugin de tipografia de
+   * 30 kB para cinco etiquetas.
+   */
+  .markdown {
+    @apply text-[15px] leading-relaxed text-texto-medio;
+  }
+  .markdown > * + * {
+    @apply mt-3;
+  }
+  .markdown h1,
+  .markdown h2,
+  .markdown h3,
+  .markdown h4 {
+    @apply mt-6 font-marca font-semibold text-texto;
+  }
+  .markdown h1 {
+    @apply text-xl;
+  }
+  .markdown h2 {
+    @apply text-lg;
+  }
+  .markdown h3 {
+    @apply text-base;
+  }
+  .markdown h4 {
+    @apply text-[15px];
+  }
+  .markdown strong {
+    @apply font-semibold text-texto;
+  }
+  .markdown ul {
+    @apply list-disc space-y-1.5 pl-5;
+  }
+  .markdown ol {
+    @apply list-decimal space-y-1.5 pl-5;
+  }
+  .markdown a {
+    @apply text-tinta-claro underline underline-offset-2 hover:text-marca-oscura;
+  }
+  .markdown code {
+    @apply rounded border border-borde bg-superficie-alt px-1.5 py-0.5 text-[0.86em];
+  }
+  .markdown blockquote {
+    @apply border-l-2 border-marca pl-3 italic;
+  }
+  .markdown table {
+    @apply w-full border-collapse text-sm;
+  }
+  .markdown th,
+  .markdown td {
+    @apply border border-borde px-2.5 py-1.5 text-left;
+  }
+  .markdown hr {
+    @apply border-borde;
+  }
+}
+
+/*
+ * Leaflet se carga con su hoja oficial desde `node_modules` en el componente
+ * del mapa. Esto solo ajusta lo que choca con el tema: el contenedor gris por
+ * defecto y el borde cuadrado.
+ */
+.leaflet-container {
+  @apply rounded-marca font-base;
+  background: #e8eaed;
+}
+
+.leaflet-container a.leaflet-popup-close-button {
+  @apply text-texto-medio;
+}
