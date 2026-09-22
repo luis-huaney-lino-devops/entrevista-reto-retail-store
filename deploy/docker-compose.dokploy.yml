@@ -1,0 +1,212 @@
+# Despliegue en Dokploy. Un solo servicio de tipo Compose con los tres
+# procesos de la aplicacion mas un nginx de entrada que reparte por dominio.
+#
+#   Internet -> Traefik (el de Dokploy: 80/443 + Let's Encrypt)
+#            -> retail-proxy (nginx)  y segun el Host:
+#                 tienda.dominio  -> retail-tienda  (Next.js, SSR)
+#                 admin.dominio   -> retail-panel   (nginx + bundle de Vite)
+#                 api.dominio     -> retail-api     (Spring Boot)
+#                                       |
+#                                       +-> Postgres de Dokploy (servicio aparte)
+#
+# La base de datos NO se levanta aqui: ya existe como servicio de Dokploy y se
+# alcanza por su nombre de contenedor dentro de `dokploy-network`.
+#
+# Los nombres de servicio llevan el prefijo `retail-` a proposito: en
+# `dokploy-network` conviven todos los proyectos del VPS, y un alias generico
+# como `api` puede acabar resolviendo al de otra pila.
+
+name: entrevista-retail-store
+
+x-registro: &registro
+  logging:
+    driver: json-file
+    options:
+      max-size: "10m"
+      max-file: "3"
+
+services:
+  # ------------------------------------------------------------------ API ---
+  retail-api:
+    <<: *registro
+    build:
+      # El contexto es la raiz del repositorio: el Dockerfile necesita
+      # database/migrations, que vive fuera de backend/java.
+      context: ..
+      dockerfile: backend/java/Dockerfile
+    restart: unless-stopped
+    environment:
+      DB_URL: jdbc:postgresql://${DB_HOST:-entrevista-storebasededatos-fjl4k6}:${DB_PUERTO:-5432}/${DB_NOMBRE:-store-db}
+      DB_USER: ${DB_USUARIO:-postgres}
+      DB_PASSWORD: ${DB_CLAVE:?falta DB_CLAVE en el entorno del servicio}
+
+      # Los dos origenes del navegador. Sirve para CORS y tambien para el
+      # WebSocket del chat: ConfiguracionWebSocket usa esta misma lista.
+      CORS_ALLOWED_ORIGINS: https://${DOMINIO_TIENDA},https://${DOMINIO_ADMIN}
+
+      # Sin esto la aplicacion arranca con la clave de desarrollo que esta
+      # escrita en application.yml, y cualquiera que lea el repositorio puede
+      # firmar tokens validos. Minimo 32 bytes.
+      JWT_SECRETO: ${JWT_SECRETO:?falta JWT_SECRETO en el entorno del servicio}
+      # Todo va por https detras de Traefik: la cookie de refresco se marca
+      # Secure y deja de viajar en claro.
+      JWT_COOKIE_SEGURA: "true"
+
+      GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID:-}
+
+      ALMACEN_TIPO: ${ALMACEN_TIPO:-local}
+      ALMACEN_DIRECTORIO: /app/datos/archivos
+      ALMACEN_URL_PUBLICA: https://${DOMINIO_API}/archivos
+      R2_ENDPOINT: ${R2_ENDPOINT:-}
+      R2_BUCKET: ${R2_BUCKET:-}
+      R2_ACCESS_KEY_ID: ${R2_ACCESS_KEY_ID:-}
+      R2_SECRET_ACCESS_KEY: ${R2_SECRET_ACCESS_KEY:-}
+      R2_REGION: ${R2_REGION:-auto}
+
+      TZ: ${TZ:-America/Lima}
+    volumes:
+      # Solo lo que suben las personas. `semilla/` queda dentro de la imagen
+      # para que una imagen nueva traiga sus fotos nuevas sin tocar el volumen.
+      - archivos_productos:/app/datos/archivos/productos
+      - archivos_chat:/app/datos/archivos/chat
+    networks:
+      # `interna` para que la vean el proxy y la tienda; `dokploy-network`
+      # unicamente para llegar al Postgres de Dokploy.
+      - interna
+      - dokploy-network
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://127.0.0.1:8080/health"]
+      interval: 15s
+      timeout: 5s
+      retries: 10
+      # Flyway aplica V001 y V002 (medio MB de datos de semilla) antes de que
+      # Spring abra el puerto. En un VPS modesto eso se va a un par de minutos
+      # el primer arranque, y con un start_period corto Docker mata el
+      # contenedor justo mientras migra.
+      start_period: 180s
+
+  # --------------------------------------------------------------- tienda ---
+  retail-tienda:
+    <<: *registro
+    build:
+      context: ../apps/storefront
+      dockerfile: Dockerfile
+      args:
+        # Se incrustan en el bundle al construir. Cambiar un dominio obliga a
+        # reconstruir la imagen; no basta con reiniciar el contenedor.
+        NEXT_PUBLIC_API_URL: https://${DOMINIO_API}/api/v1
+        NEXT_PUBLIC_URL_TIENDA: https://${DOMINIO_TIENDA}
+        NEXT_PUBLIC_GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID:-}
+        API_URL_INTERNO: http://retail-api:8080/api/v1
+    restart: unless-stopped
+    environment:
+      NODE_ENV: production
+      # El servidor de Next habla con la API por la red interna: no sale a
+      # internet ni pasa por Traefik para pintar una pagina.
+      API_URL_INTERNO: http://retail-api:8080/api/v1
+      TZ: ${TZ:-America/Lima}
+    networks:
+      - interna
+    depends_on:
+      retail-api:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://127.0.0.1:3000/"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+
+  # ---------------------------------------------------------------- panel ---
+  retail-panel:
+    <<: *registro
+    build:
+      context: ../apps/admin
+      dockerfile: Dockerfile
+      args:
+        VITE_API_URL: https://${DOMINIO_API}/api/v1
+    restart: unless-stopped
+    networks:
+      - interna
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://127.0.0.1/index.html"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+
+  # ----------------------------------------------------- nginx de entrada ---
+  retail-proxy:
+    <<: *registro
+    build:
+      context: ./nginx
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    environment:
+      DOMINIO_TIENDA: ${DOMINIO_TIENDA:?falta DOMINIO_TIENDA en el entorno del servicio}
+      DOMINIO_ADMIN: ${DOMINIO_ADMIN:?falta DOMINIO_ADMIN en el entorno del servicio}
+      DOMINIO_API: ${DOMINIO_API:?falta DOMINIO_API en el entorno del servicio}
+    networks:
+      - interna
+      - dokploy-network
+    depends_on:
+      - retail-api
+      - retail-tienda
+      - retail-panel
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://127.0.0.1/salud-gateway"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+    labels:
+      # Los nombres de router, service y middleware de Traefik son GLOBALES a
+      # toda la instancia, no de esta pila: llevan el prefijo del proyecto para
+      # no pisarse con otro despliegue del mismo VPS.
+      - traefik.enable=true
+      # Obligatorio cuando el contenedor esta en mas de una red: sin esto
+      # Traefik puede quedarse con la IP de `interna`, a la que no llega.
+      - traefik.docker.network=dokploy-network
+      - traefik.http.services.entrevista-proxy.loadbalancer.server.port=80
+
+      # Un solo `service` y tres routers. Todo entra por el mismo nginx, que es
+      # quien mira el Host y decide; Traefik solo termina el TLS y emite los
+      # certificados.
+      - "traefik.http.routers.entrevista-tienda.rule=Host(`${DOMINIO_TIENDA}`)"
+      - traefik.http.routers.entrevista-tienda.entrypoints=websecure
+      - traefik.http.routers.entrevista-tienda.tls=true
+      - traefik.http.routers.entrevista-tienda.tls.certresolver=${TRAEFIK_CERT_RESOLVER:-letsencrypt}
+      - traefik.http.routers.entrevista-tienda.service=entrevista-proxy
+
+      - "traefik.http.routers.entrevista-admin.rule=Host(`${DOMINIO_ADMIN}`)"
+      - traefik.http.routers.entrevista-admin.entrypoints=websecure
+      - traefik.http.routers.entrevista-admin.tls=true
+      - traefik.http.routers.entrevista-admin.tls.certresolver=${TRAEFIK_CERT_RESOLVER:-letsencrypt}
+      - traefik.http.routers.entrevista-admin.service=entrevista-proxy
+
+      - "traefik.http.routers.entrevista-api.rule=Host(`${DOMINIO_API}`)"
+      - traefik.http.routers.entrevista-api.entrypoints=websecure
+      - traefik.http.routers.entrevista-api.tls=true
+      - traefik.http.routers.entrevista-api.tls.certresolver=${TRAEFIK_CERT_RESOLVER:-letsencrypt}
+      - traefik.http.routers.entrevista-api.service=entrevista-proxy
+
+      # El 80 existe solo para el desafio de Let's Encrypt y para mandar a la
+      # gente al 443.
+      - traefik.http.middlewares.entrevista-a-https.redirectscheme.scheme=https
+      - traefik.http.middlewares.entrevista-a-https.redirectscheme.permanent=true
+      - "traefik.http.routers.entrevista-http.rule=Host(`${DOMINIO_TIENDA}`) || Host(`${DOMINIO_ADMIN}`) || Host(`${DOMINIO_API}`)"
+      - traefik.http.routers.entrevista-http.entrypoints=web
+      - traefik.http.routers.entrevista-http.middlewares=entrevista-a-https
+      - traefik.http.routers.entrevista-http.service=entrevista-proxy
+
+networks:
+  # Solo para que hablen entre si los cuatro contenedores de esta pila.
+  interna:
+    driver: bridge
+  # La crea Dokploy al instalarse; aqui se usa, no se define.
+  dokploy-network:
+    external: true
+
+volumes:
+  archivos_productos:
+  archivos_chat:

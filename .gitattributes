@@ -1,0 +1,9 @@
+# El proyecto es LF en todas partes (ver .editorconfig). Sin esto, un clon en
+# Windows puede devolver CRLF a los Dockerfile y a los .conf de nginx, y nginx
+# rechaza una directiva que termina en \r.
+* text=auto eol=lf
+
+*.webp binary
+*.png  binary
+*.jpg  binary
+*.pdf  binary

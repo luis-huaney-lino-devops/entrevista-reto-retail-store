@@ -1,0 +1,36 @@
+# Contexto de build de la API (backend/java/Dockerfile) — la raiz del repo.
+# Sin esto el contexto arrastra node_modules de los dos frontends y el .next,
+# que son cientos de MB que el build de Java no mira.
+
+.git
+.github
+.gitignore
+.editorconfig
+
+# Dependencias y artefactos de build
+**/node_modules
+**/.next
+**/dist
+**/target
+**/tsconfig.tsbuildinfo
+**/__pycache__
+
+# Secretos: nunca entran en una imagen
+**/.env
+**/.env.*
+!**/.env.example
+
+# Restos de un proyecto anterior (ver CLAUDE.md)
+_empleados-v1
+docs copy
+
+# Documentacion y pruebas: no participan en el build
+docs
+pruebas
+estructura.txt
+reto.md
+README.md
+
+# Archivos subidos en local. La semilla SI entra (la necesita el catalogo).
+backend/java/datos/archivos/productos
+backend/java/datos/archivos/chat

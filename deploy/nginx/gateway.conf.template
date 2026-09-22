@@ -1,0 +1,156 @@
+# nginx de entrada. Un solo contenedor recibe los tres dominios y, segun el
+# `Host` de la peticion, la manda a la tienda, al panel o a la API.
+#
+# Este archivo es una PLANTILLA: la imagen de nginx corre `envsubst` sobre
+# /etc/nginx/templates/*.template al arrancar y escribe el resultado en
+# /etc/nginx/conf.d/. Solo se sustituye lo que empieza por DOMINIO_ (lo fija
+# NGINX_ENVSUBST_FILTER en el Dockerfile), asi que las variables propias de
+# nginx —$host, $remote_addr...— llegan intactas.
+
+# El DNS interno de Docker. Hace falta porque los destinos se escriben en una
+# variable (ver mas abajo) y eso obliga a nginx a resolverlos en cada peticion.
+resolver 127.0.0.11 valid=10s ipv6=off;
+
+# El cliente real esta detras de Traefik, que llega por la red de Docker. Sin
+# esto todos los accesos quedan registrados con la IP del contenedor de Traefik.
+set_real_ip_from 10.0.0.0/8;
+set_real_ip_from 172.16.0.0/12;
+set_real_ip_from 192.168.0.0/16;
+real_ip_header   X-Forwarded-For;
+real_ip_recursive on;
+
+# Conserva el esquema y el puerto que anuncia Traefik; solo rellena si no vino
+# nada (por ejemplo al llamar al contenedor directo desde la red interna).
+map $http_x_forwarded_proto $proto_reenviado {
+    default $http_x_forwarded_proto;
+    ''      $scheme;
+}
+map $http_x_forwarded_port $puerto_reenviado {
+    default $http_x_forwarded_port;
+    ''      $server_port;
+}
+
+# Traefik ya escribio la IP del cliente en X-Forwarded-For. Se reenvia tal cual
+# en vez de usar $proxy_add_x_forwarded_for, que la anadiria una segunda vez:
+# el modulo realip de arriba ya reescribio $remote_addr con esa misma IP.
+map $http_x_forwarded_for $cadena_reenviada {
+    default $http_x_forwarded_for;
+    ''      $remote_addr;
+}
+
+# El handshake de WebSocket pide `Connection: upgrade`; cualquier otra peticion
+# sobre la misma conexion tiene que pedir `close`, o nginx la deja colgada.
+map $http_upgrade $conexion_upgrade {
+    default upgrade;
+    ''      close;
+}
+
+server_tokens off;
+
+# Tiempos de espera hacia los tres destinos. Aqui, a nivel http, para que cada
+# `location` los herede y pueda sobrescribirlos si los suyos son otros (el
+# WebSocket del chat lo hace). Los 60 s por defecto se quedan cortos para una
+# respuesta grande del panel.
+proxy_connect_timeout 10s;
+proxy_send_timeout    120s;
+proxy_read_timeout    120s;
+
+# Dominio no reconocido: se cierra la conexion sin responder. Sin este bloque,
+# el primer `server` haria de predeterminado y la tienda contestaria a
+# cualquier nombre que apunte a esta IP.
+server {
+    listen      80 default_server;
+    server_name _;
+
+    # Unica excepcion: el healthcheck del compose, que llega sin Host util.
+    location = /salud-gateway {
+        access_log off;
+        add_header Content-Type text/plain;
+        return 200 "ok\n";
+    }
+
+    location / {
+        return 444;
+    }
+}
+
+# ---------------------------------------------------------------- tienda ----
+server {
+    listen      80;
+    server_name ${DOMINIO_TIENDA};
+
+    client_max_body_size 20m;
+
+    # Next.js ya sirve sus assets con hash y su propio Cache-Control; aqui no se
+    # toca nada de eso, solo se reenvia.
+    location / {
+        include /etc/nginx/proxy.conf;
+        # El destino va en una variable a proposito. Con `proxy_pass
+        # http://retail-tienda:3000;` nginx resuelve el nombre UNA vez, al
+        # arrancar: si Dokploy redespliega solo la tienda, el contenedor nuevo
+        # coge otra IP y este nginx sigue hablando con la vieja hasta que
+        # alguien lo reinicia. Y si el destino no existe todavia, nginx se niega
+        # a arrancar y se lleva por delante tambien a los otros dos dominios.
+        # Con variable se resuelve en cada peticion, contra el `resolver` de
+        # arriba. El precio es tener que pegar $request_uri a mano.
+        set        $destino "retail-tienda:3000";
+        proxy_pass http://$destino$request_uri;
+    }
+}
+
+# ----------------------------------------------------------------- panel ----
+server {
+    listen      80;
+    server_name ${DOMINIO_ADMIN};
+
+    client_max_body_size 20m;
+
+    location / {
+        include    /etc/nginx/proxy.conf;
+        set        $destino "retail-panel:80";
+        proxy_pass http://$destino$request_uri;
+    }
+}
+
+# ------------------------------------------------------------------- api ----
+server {
+    listen      80;
+    server_name ${DOMINIO_API};
+
+    # El tope de subida del backend es 15 MB (SUBIDA_MAX_PETICION). Si nginx
+    # cortara antes, el cliente veria un 413 de nginx en vez del error de
+    # negocio del backend, que si dice que pasa.
+    client_max_body_size 20m;
+
+    # El chat cuelga de la raiz, no de /api/v1: no es una ruta REST.
+    location /ws/ {
+        include    /etc/nginx/proxy.conf;
+        set        $destino "retail-api:8080";
+        proxy_pass http://$destino$request_uri;
+
+        proxy_set_header Upgrade    $http_upgrade;
+        proxy_set_header Connection $conexion_upgrade;
+
+        # Una conexion de chat esta en silencio la mayor parte del tiempo. Con
+        # el read_timeout normal nginx la cerraria cada dos minutos y el panel
+        # se pasaria el dia reconectando.
+        proxy_read_timeout 3600s;
+        proxy_send_timeout 3600s;
+        proxy_buffering    off;
+    }
+
+    # Imagenes del catalogo y adjuntos del chat cuando ALMACEN_TIPO=local. La
+    # clave lleva el hash del contenido, asi que el backend ya manda
+    # `Cache-Control: immutable`; nginx solo lo deja pasar.
+    location /archivos/ {
+        include    /etc/nginx/proxy.conf;
+        set        $destino "retail-api:8080";
+        proxy_pass http://$destino$request_uri;
+    }
+
+    location / {
+        include    /etc/nginx/proxy.conf;
+        set        $destino "retail-api:8080";
+        proxy_pass http://$destino$request_uri;
+    }
+}
