@@ -49,8 +49,12 @@ public class FiltroJwtTienda extends OncePerRequestFilter {
     @Override
     protected boolean shouldNotFilter(HttpServletRequest peticion) {
         String uri = peticion.getRequestURI();
-        return !uri.startsWith(ConfiguracionSeguridad.RAIZ_CUENTA)
-                || ConfiguracionSeguridad.esRutaDeSesionDeCuenta(uri);
+        // Dos raíces, no una: las órdenes de la tienda no cuelgan de /cuenta
+        // pero son igual de suyas. Quedaron fuera al añadirlas y el efecto no
+        // fue un error visible, sino que el principal llegaba nulo.
+        boolean esDeLaTienda = uri.startsWith(ConfiguracionSeguridad.RAIZ_CUENTA)
+                || uri.startsWith(ConfiguracionSeguridad.RAIZ_ORDENES);
+        return !esDeLaTienda || ConfiguracionSeguridad.esRutaDeSesionDeCuenta(uri);
     }
 
     @Override

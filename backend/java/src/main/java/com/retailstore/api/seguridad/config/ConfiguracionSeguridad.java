@@ -40,6 +40,20 @@ public class ConfiguracionSeguridad {
     public static final String RAIZ_PANEL = "/api/v1/admin";
     public static final String RAIZ_CUENTA = "/api/v1/cuenta";
 
+    /**
+     * Las órdenes de la tienda. Son del mundo del cliente aunque no cuelguen de
+     * {@code /cuenta}: quien confirma una compra o consulta su historial lo hace
+     * con un token de tienda.
+     *
+     * <p>Tiene que estar aquí porque {@link FiltroJwtTienda} decide por prefijo
+     * en qué rutas mira la cabecera {@code Authorization}. Sin esta constante el
+     * filtro se saltaba {@code /api/v1/ordenes}, y ahí nadie quedaba
+     * autenticado: el historial respondía 401 y —peor y en silencio— el checkout
+     * recibía el principal nulo y registraba como <strong>invitada</strong> la
+     * compra de alguien que sí tenía la sesión abierta.
+     */
+    public static final String RAIZ_ORDENES = "/api/v1/ordenes";
+
     public static final String RUTA_ACCESO = RAIZ_PANEL + "/acceso";
     public static final String RUTA_REFRESCO = RAIZ_PANEL + "/refrescar";
     public static final String RUTA_SALIDA = RAIZ_PANEL + "/salir";
