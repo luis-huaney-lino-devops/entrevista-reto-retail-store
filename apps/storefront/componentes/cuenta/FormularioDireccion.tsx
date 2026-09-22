@@ -1,16 +1,18 @@
 'use client'
 
 import dynamic from 'next/dynamic'
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Loader2, MapPin } from 'lucide-react'
 
 import { Boton } from '@/componentes/ui/Boton'
-import { CampoSelect, CampoTexto } from '@/componentes/ui/Campo'
+import { CampoTexto } from '@/componentes/ui/Campo'
+import { Combobox, normalizarTexto, type OpcionCombobox } from '@/componentes/ui/Combobox'
 import { peticion } from '@/lib/api.cliente'
 import { ErrorApi, mensajeDeError } from '@/lib/errores'
 import type { Direccion, PeticionDireccion, UbigeoItem } from '@/lib/tipos'
 
-import type { Punto } from './MapaUbicacion'
+import { geocodificarInverso } from './geocodificacion'
+import type { MensajeMapa, Punto } from './MapaUbicacion'
 
 /**
  * Formulario de direccion, con ubigeo encadenado y punto en el mapa.
@@ -20,11 +22,24 @@ import type { Punto } from './MapaUbicacion'
  * JavaScript solo se descarga cuando alguien abre este formulario, no en cada
  * visita a la tienda.
  *
- * Los tres selects se alimentan del ubigeo y se encadenan: elegir departamento
- * pide sus provincias, elegir provincia pide sus distritos, y cambiar uno de
- * arriba **limpia los de abajo**. Dejar una provincia de Lima colgando bajo un
- * departamento de Cusco es la forma mas rapida de guardar una direccion
- * imposible.
+ * **Los tres selectores son `<Combobox/>`, no `<select>`.** El ubigeo peruano
+ * tiene 25 departamentos, 196 provincias y **1 828 distritos**: un desplegable
+ * nativo con 43 distritos de Lima obliga a recorrerlos con la vista, y la
+ * busqueda por primera letra del navegador no sirve cuando media lista empieza
+ * por "SAN". Escribir tres letras si sirve.
+ *
+ * Los tres se encadenan: elegir departamento pide sus provincias, elegir
+ * provincia pide sus distritos, y cambiar uno de arriba **limpia los de abajo**.
+ * Dejar una provincia de Lima colgando bajo un departamento de Cusco es la
+ * forma mas rapida de guardar una direccion imposible.
+ *
+ * **Rellenar desde el mapa.** Con un punto marcado —por geolocalizacion, por un
+ * clic o arrastrando el marcador— se puede pedir la direccion a Nominatim y
+ * precargar calle, numero, codigo postal y los tres selectores. El cruce con el
+ * ubigeo no puede ser literal: Nominatim devuelve "Miraflores" y el ubigeo
+ * guarda "MIRAFLORES", y ademas hay "CAÑETE" contra "Cañete". Por eso se
+ * compara normalizado —sin acentos y en minusculas— y con tolerancia: primero
+ * exacto, luego por prefijo, luego por contencion.
  *
  * Si el ubigeo aun no existe (404), el formulario lo dice y no finge: un select
  * vacio sin explicacion parece un fallo del navegador.
@@ -46,13 +61,57 @@ type Propiedades = {
   alCancelar: () => void
 }
 
+/** Lo que sobra delante o detras del nombre de una division peruana. */
+const RUIDO = /^(departamento|provincia|distrito|region|municipalidad|municipio)\s+(constitucional\s+)?(de|del|d)?\s*/
+
+/** Deja el nombre en su forma comparable: sin acentos, sin "Provincia de". */
+function comparable(nombre: string): string {
+  return normalizarTexto(nombre).replace(RUIDO, '').trim()
+}
+
+/**
+ * Busca en el ubigeo el primero de varios nombres candidatos.
+ *
+ * La tolerancia va de mas a menos estricta y **en ese orden**: si se empezara
+ * por contencion, "LIMA" encontraria "LIMA" pero tambien podria enganchar otra
+ * cosa antes. Exacto primero, y solo si nada cuadra se afloja.
+ */
+function emparejar(lista: UbigeoItem[], candidatos: string[]): UbigeoItem | null {
+  for (const candidato of candidatos) {
+    const buscado = comparable(candidato)
+    if (!buscado) continue
+    const exacto = lista.find((i) => comparable(i.nombre) === buscado)
+    if (exacto) return exacto
+    // Aflojar con menos de cuatro letras empareja cualquier cosa: "ica" esta
+    // dentro de "CHINCHA ALTA". A partir de ahi solo se prueba con nombres
+    // largos, y los cortos se quedan sin sugerencia, que es lo correcto.
+    if (buscado.length < 4) continue
+    const largos = lista.filter((i) => comparable(i.nombre).length >= 4)
+    const prefijo = largos.find(
+      (i) => comparable(i.nombre).startsWith(buscado) || buscado.startsWith(comparable(i.nombre)),
+    )
+    if (prefijo) return prefijo
+    const contenido = largos.find(
+      (i) => comparable(i.nombre).includes(buscado) || buscado.includes(comparable(i.nombre)),
+    )
+    if (contenido) return contenido
+  }
+  return null
+}
+
+/** "la calle, el distrito y la provincia" */
+function enumerar(partes: string[]): string {
+  if (partes.length <= 1) return partes[0] ?? ''
+  return `${partes.slice(0, -1).join(', ')} y ${partes[partes.length - 1]}`
+}
+
 export function FormularioDireccion({ inicial, alGuardar, alCancelar }: Propiedades) {
   const [departamentos, setDepartamentos] = useState<UbigeoItem[]>([])
   const [provincias, setProvincias] = useState<UbigeoItem[]>([])
   const [distritos, setDistritos] = useState<UbigeoItem[]>([])
   const [ubigeoNoDisponible, setUbigeoNoDisponible] = useState(false)
 
-  // El estado de los selects es texto porque el valor de un `<option>` lo es.
+  // El estado de los selectores es texto porque el valor de una opcion lo es.
   // El id se convierte a numero al enviar, que es como lo espera la API.
   const [departamentoId, setDepartamentoId] = useState(String(inicial?.departamento?.id ?? ''))
   const [provinciaId, setProvinciaId] = useState(String(inicial?.provincia?.id ?? ''))
@@ -72,6 +131,8 @@ export function FormularioDireccion({ inicial, alGuardar, alCancelar }: Propieda
       ? { latitud: inicial.latitud, longitud: inicial.longitud }
       : null,
   )
+  const [rellenando, setRellenando] = useState(false)
+  const [mensajeRelleno, setMensajeRelleno] = useState<MensajeMapa | null>(null)
 
   const [errores, setErrores] = useState<Record<string, string>>({})
   const [error, setError] = useState<string | null>(null)
@@ -133,7 +194,118 @@ export function FormularioDireccion({ inicial, alGuardar, alCancelar }: Propieda
     }
   }, [provinciaId])
 
-  const alMoverPunto = useCallback((p: Punto) => setPunto(p), [])
+  const alMoverPunto = useCallback((p: Punto) => {
+    setPunto(p)
+    // El punto ya no corresponde a lo que dijo el ultimo rellenado.
+    setMensajeRelleno(null)
+  }, [])
+
+  /**
+   * Traduce el punto del mapa a una direccion y precarga lo que encuentre.
+   *
+   * **Nunca deja el formulario peor de como estaba.** Solo escribe los campos
+   * que Nominatim devuelve con contenido, y si algo falla —el servicio, la red,
+   * el ubigeo, o simplemente un punto que nadie ha cartografiado— lo unico que
+   * pasa es que el mensaje lo dice y se rellena a mano. El punto sigue marcado.
+   */
+  const rellenarDesdeMapa = useCallback(
+    (p: Punto) => {
+      void (async () => {
+        setRellenando(true)
+        setMensajeRelleno(null)
+        try {
+          const hallado = await geocodificarInverso(p.latitud, p.longitud)
+          if (!hallado) {
+            setMensajeRelleno({
+              texto:
+                'No pudimos leer la direccion de ese punto. El punto queda marcado; completa los campos a mano.',
+              tono: 'aviso',
+            })
+            return
+          }
+
+          const puestos: string[] = []
+          if (hallado.calle) {
+            setCalle(hallado.calle)
+            puestos.push('la calle')
+          }
+          if (hallado.numero) {
+            setNumero(hallado.numero)
+            puestos.push('el numero')
+          }
+          if (hallado.codigoPostal) {
+            setCodigoPostal(hallado.codigoPostal)
+            puestos.push('el codigo postal')
+          }
+
+          // El ubigeo se baja en cascada: sin departamento no hay provincia, y
+          // sin provincia no hay distrito. Cada escalon se busca en la lista
+          // real que devuelve la API, no en un mapa de nombres inventado aqui.
+          try {
+            const departamento = emparejar(departamentos, hallado.departamento)
+            if (departamento) {
+              setDepartamentoId(String(departamento.id))
+              puestos.push('el departamento')
+
+              const listaProvincias = await peticion<UbigeoItem[]>(
+                `/ubigeo/departamentos/${departamento.id}/provincias`,
+              )
+              setProvincias(listaProvincias)
+              const provincia = emparejar(listaProvincias, hallado.provincia)
+              if (provincia) {
+                setProvinciaId(String(provincia.id))
+                puestos.push('la provincia')
+
+                const listaDistritos = await peticion<UbigeoItem[]>(`/ubigeo/provincias/${provincia.id}/distritos`)
+                setDistritos(listaDistritos)
+                const distrito = emparejar(listaDistritos, hallado.distrito)
+                if (distrito) {
+                  setDistritoId(String(distrito.id))
+                  puestos.push('el distrito')
+                } else {
+                  setDistritoId('')
+                }
+              } else {
+                setProvinciaId('')
+                setDistritoId('')
+              }
+            }
+          } catch {
+            // El ubigeo no respondio. Lo de la calle ya esta puesto igualmente.
+          }
+
+          setMensajeRelleno(
+            puestos.length > 0
+              ? {
+                  texto: `Rellenamos ${enumerar(puestos)} desde el mapa. Revisa que sea correcto antes de guardar.`,
+                  tono: 'exito',
+                }
+              : {
+                  texto:
+                    'Encontramos el punto, pero no pudimos deducir la direccion. El punto queda marcado; completa los campos a mano.',
+                  tono: 'aviso',
+                },
+          )
+        } finally {
+          setRellenando(false)
+        }
+      })()
+    },
+    [departamentos],
+  )
+
+  const opcionesDepartamento = useMemo<OpcionCombobox[]>(
+    () => departamentos.map((d) => ({ valor: String(d.id), etiqueta: d.nombre })),
+    [departamentos],
+  )
+  const opcionesProvincia = useMemo<OpcionCombobox[]>(
+    () => provincias.map((p) => ({ valor: String(p.id), etiqueta: p.nombre })),
+    [provincias],
+  )
+  const opcionesDistrito = useMemo<OpcionCombobox[]>(
+    () => distritos.map((d) => ({ valor: String(d.id), etiqueta: d.nombre })),
+    [distritos],
+  )
 
   function validar(): boolean {
     const nuevos: Record<string, string> = {}
@@ -190,61 +362,53 @@ export function FormularioDireccion({ inicial, alGuardar, alCancelar }: Propieda
         <legend className="mb-1 text-[13px] font-semibold uppercase tracking-wide text-texto">Ubicacion</legend>
 
         <div className="grid gap-4 sm:grid-cols-3">
-          <CampoSelect
+          <Combobox
             etiqueta="Departamento"
-            value={departamentoId}
+            opciones={opcionesDepartamento}
+            valor={departamentoId}
             error={errores.departamentoId}
-            onChange={(e) => {
-              setDepartamentoId(e.target.value)
+            deshabilitado={departamentos.length === 0}
+            marcador={departamentos.length === 0 ? 'Cargando...' : 'Elige...'}
+            alCambiar={(valor) => {
+              setDepartamentoId(valor)
               // Cambiar arriba limpia lo de abajo: una provincia colgando de
               // otro departamento es una direccion imposible.
               setProvinciaId('')
               setDistritoId('')
             }}
-          >
-            <option value="">Elige...</option>
-            {departamentos.map((d) => (
-              <option key={d.id} value={d.id}>
-                {d.nombre}
-              </option>
-            ))}
-          </CampoSelect>
+          />
 
-          <CampoSelect
+          <Combobox
             etiqueta="Provincia"
-            value={provinciaId}
-            disabled={!departamentoId || provincias.length === 0}
+            opciones={opcionesProvincia}
+            valor={provinciaId}
             error={errores.provinciaId}
-            onChange={(e) => {
-              setProvinciaId(e.target.value)
+            deshabilitado={!departamentoId || provincias.length === 0}
+            marcador={departamentoId ? 'Elige...' : 'Elige antes el departamento'}
+            alCambiar={(valor) => {
+              setProvinciaId(valor)
               setDistritoId('')
             }}
-          >
-            <option value="">{departamentoId ? 'Elige...' : 'Elige antes el departamento'}</option>
-            {provincias.map((p) => (
-              <option key={p.id} value={p.id}>
-                {p.nombre}
-              </option>
-            ))}
-          </CampoSelect>
+          />
 
-          <CampoSelect
+          <Combobox
             etiqueta="Distrito"
-            value={distritoId}
-            disabled={!provinciaId || distritos.length === 0}
+            opciones={opcionesDistrito}
+            valor={distritoId}
             error={errores.distritoId}
-            onChange={(e) => setDistritoId(e.target.value)}
-          >
-            <option value="">{provinciaId ? 'Elige...' : 'Elige antes la provincia'}</option>
-            {distritos.map((d) => (
-              <option key={d.id} value={d.id}>
-                {d.nombre}
-              </option>
-            ))}
-          </CampoSelect>
+            deshabilitado={!provinciaId || distritos.length === 0}
+            marcador={provinciaId ? 'Elige...' : 'Elige antes la provincia'}
+            alCambiar={setDistritoId}
+          />
         </div>
 
-        <MapaUbicacion valor={punto} alCambiar={alMoverPunto} />
+        <MapaUbicacion
+          valor={punto}
+          alCambiar={alMoverPunto}
+          alRellenar={rellenarDesdeMapa}
+          rellenando={rellenando}
+          mensajeRelleno={mensajeRelleno}
+        />
       </fieldset>
 
       <fieldset className="space-y-4">

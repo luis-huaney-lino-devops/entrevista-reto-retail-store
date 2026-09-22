@@ -1,7 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import { Heart, Loader2, Scale, ShoppingCart } from 'lucide-react'
+import { ArrowLeftRight, Heart, Loader2, ShoppingCart } from 'lucide-react'
 
 import { clases } from '@/lib/formato'
 import type { ProductoResumen } from '@/lib/tipos'
@@ -101,7 +101,7 @@ export function ComprarProducto({ producto, stock }: Propiedades) {
               : 'border-borde bg-white text-texto-medio hover:border-borde-fuerte hover:text-texto',
           )}
         >
-          <Scale size={16} aria-hidden />
+          <ArrowLeftRight size={16} aria-hidden />
           {comparando ? 'En el comparador' : 'Comparar'}
         </button>
       </div>

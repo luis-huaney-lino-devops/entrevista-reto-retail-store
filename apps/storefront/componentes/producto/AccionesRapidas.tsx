@@ -1,7 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import { Check, Heart, Loader2, ShoppingCart, Scale } from 'lucide-react'
+import { ArrowLeftRight, Check, Heart, Loader2, ShoppingCart } from 'lucide-react'
 
 import { clases } from '@/lib/formato'
 import type { ProductoResumen } from '@/lib/tipos'
@@ -19,6 +19,12 @@ import { useFavoritos } from '@/funcionalidades/favoritos/ProveedorFavoritos'
  * Consume `useAccionesCarrito` y no el estado del carrito: las acciones nunca
  * cambian de identidad, asi que una rejilla de 24 tarjetas no se repinta cuando
  * sube una cantidad en el panel lateral.
+ *
+ * El icono de comparar son **dos flechas opuestas** (`ArrowLeftRight`), el
+ * simbolo de intercambio de toda la vida. La balanza que habia antes se lee
+ * como "pesar", "justicia" o "moderacion" segun quien mire; las dos flechas
+ * dicen "enfrentar esto con aquello" y no dicen otra cosa. Es el mismo icono en
+ * la tarjeta, en la ficha, en la cabecera y en `/comparar`.
  *
  * Accesibilidad: los tres son botones de solo icono, asi que los tres llevan
  * `aria-label`, y el estado (favorito si/no, comparando si/no) va en
@@ -71,7 +77,7 @@ export function AccionesRapidas({ producto, sinAgregar = false }: Propiedades) {
         onClick={() => alternarComparador(producto)}
         className={comparando ? 'border-tinta-claro/40 bg-tinta-suave text-tinta-claro' : ''}
       >
-        <Scale size={16} aria-hidden />
+        <ArrowLeftRight size={16} aria-hidden />
       </BotonIcono>
 
       {!sinAgregar && (

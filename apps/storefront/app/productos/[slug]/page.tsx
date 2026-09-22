@@ -4,17 +4,24 @@ import { notFound } from 'next/navigation'
 import { Check, PackageX, Truck } from 'lucide-react'
 
 import { Contenedor, Migas } from '@/componentes/disposicion/Seccion'
+import { SeccionOpiniones } from '@/componentes/opiniones/SeccionOpiniones'
 import { ComprarProducto } from '@/componentes/producto/ComprarProducto'
 import { Estrellas } from '@/componentes/producto/Estrellas'
 import { Galeria } from '@/componentes/producto/Galeria'
 import { Markdown } from '@/componentes/producto/Markdown'
 import { Precio } from '@/componentes/producto/Precio'
 import { RejillaProductos } from '@/componentes/producto/RejillaProductos'
-import { listarProductos, productoPorSlug, relacionados, tolerante } from '@/lib/api.servidor'
+import {
+  listarProductos,
+  opinionesDeProducto,
+  productoPorSlug,
+  relacionados,
+  tolerante,
+} from '@/lib/api.servidor'
 import { ErrorApi } from '@/lib/errores'
 import { MigasJsonLd, ProductoJsonLd, type Miga } from '@/lib/jsonld'
 import { recortar } from '@/lib/formato'
-import type { ProductoDetalle, ProductoResumen } from '@/lib/tipos'
+import type { Opinion, Pagina, ProductoDetalle, ProductoResumen } from '@/lib/tipos'
 
 /**
  * La ficha de producto.
@@ -34,7 +41,14 @@ import type { ProductoDetalle, ProductoResumen } from '@/lib/tipos'
  *   |- Markdown           <- servidor (el parser no viaja al navegador)
  *   |- Relacionados       <- servidor (misma subcategoria, en la misma pagina
  *   |                        cacheada: no es una peticion extra del navegador)
+ *   |- Opiniones          <- servidor (su texto tiene que estar en el HTML),
+ *   |                        salvo el formulario, que es CLIENTE: es lo unico
+ *   |                        que necesita saber quien eres
  *   \- JSON-LD            <- servidor (un `<script>`, cero JS al cliente)
+ *
+ * Las opiniones se piden aqui y no en la isla por lo mismo que los
+ * relacionados: viajan en la pagina ya cacheada. Quien escribe la suya invalida
+ * esta ruta con la accion de `acciones.ts`, para no esperar a que caduque.
  */
 
 export const revalidate = 300
@@ -93,7 +107,12 @@ export default async function PaginaProducto({ params }: Props) {
   // que es lo que el rastreador necesita ver.
   if (!producto) notFound()
 
-  const similares = await tolerante(relacionados(slug), [] as ProductoResumen[])
+  // Las dos lecturas secundarias son tolerantes: que las opiniones no
+  // respondan no justifica tumbar la ficha de un producto que si respondio.
+  const [similares, opiniones] = await Promise.all([
+    tolerante(relacionados(slug), [] as ProductoResumen[]),
+    tolerante(opinionesDeProducto(slug), null as Pagina<Opinion> | null),
+  ])
 
   const migas: Miga[] = [{ nombre: 'Inicio', href: '/' }]
   if (producto.categoria) migas.push({ nombre: producto.categoria.nombre, href: `/c/${producto.categoria.slug}` })
@@ -201,6 +220,8 @@ export default async function PaginaProducto({ params }: Props) {
             <Markdown texto={producto.descripcion} />
           </section>
         )}
+
+        <SeccionOpiniones producto={producto} opiniones={opiniones} />
 
         {similares.length > 0 && (
           <section className="mt-14" aria-labelledby="relacionados">

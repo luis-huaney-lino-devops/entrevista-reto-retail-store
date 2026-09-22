@@ -5,6 +5,7 @@ import type {
   Carrito,
   Categoria,
   Marca,
+  Opinion,
   Pagina,
   ProductoDetalle,
   ProductoResumen,
@@ -96,6 +97,22 @@ export function productoPorSlug(slug: string, opciones?: Opciones) {
 
 export function relacionados(slug: string, opciones?: Opciones) {
   return traer<ProductoResumen[]>(`/productos/${encodeURIComponent(slug)}/relacionados`, opciones)
+}
+
+/**
+ * Las opiniones de un producto, publicas y paginadas.
+ *
+ * Se piden con la misma validez que la ficha -300 s- y no en el navegador: el
+ * texto de las resenas es contenido indexable, y traerlo al montar dejaria el
+ * HTML de la pagina sin una sola palabra de lo que dice la gente.
+ *
+ * La contrapartida es que una opinion recien escrita tarda en aparecerle al
+ * resto. Por eso quien escribe la suya invalida esta pagina con la accion de
+ * servidor de `app/productos/[slug]/acciones.ts`, en vez de esperar.
+ */
+export function opinionesDeProducto(slug: string, pagina = 1, opciones?: Opciones) {
+  const consulta = pagina > 1 ? `?pagina=${pagina}` : ''
+  return traer<Pagina<Opinion>>(`/productos/${encodeURIComponent(slug)}/opiniones${consulta}`, opciones)
 }
 
 export function listarCategorias(opciones?: Opciones) {

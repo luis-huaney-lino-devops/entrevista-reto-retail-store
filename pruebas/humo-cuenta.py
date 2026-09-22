@@ -28,6 +28,16 @@ EMAIL = "humo-cuenta-%s@ejemplo.pe" % SUFIJO
 CONTRASENA = "frase larga de prueba"
 CONTRASENA_NUEVA = "otra frase larga distinta"
 
+# Los nombres empiezan por "zz" para que ordenen DETRAS de cualquier cliente
+# sembrado. El panel lista los clientes por nombre ascendente, y humo-chat.py
+# da por hecho que el primero de esa lista tiene compras; las cuentas que crea
+# esta prueba no tienen ninguna, asi que si se colaran en cabeza romperian una
+# prueba ajena. No hay endpoint para borrar un cliente -nada se borra,
+# RN-086-, asi que lo unico que se puede hacer es no estorbar.
+NOMBRE = "zz Humo Cuenta"
+NOMBRE_EDITADO = "zz Humo Editado"
+NOMBRE_INTRUSO = "zz Humo Intruso"
+
 
 def pedir(metodo, ruta, cuerpo=None, token=None, cabeceras=None, ip=None):
     url = BASE + ruta if ruta.startswith("/") else ruta
@@ -107,12 +117,12 @@ revisar("un departamento inexistente devuelve lista vacia, no 404", s == 200 and
 
 print("\n=== 2. Registro (RN-061) ===")
 s, cuerpo, _ = pedir("POST", "/cuenta/registro",
-                     {"email": EMAIL, "nombre": "Cliente Humo", "contrasena": CONTRASENA,
+                     {"email": EMAIL, "nombre": NOMBRE, "contrasena": CONTRASENA,
                       "telefono": "999888777"})
 revisar("registro nuevo -> 202", s == 202, (s, cuerpo))
 
 s, repetido, _ = pedir("POST", "/cuenta/registro",
-                       {"email": EMAIL, "nombre": "Otro Nombre", "contrasena": "una contrasena distinta"})
+                       {"email": EMAIL, "nombre": "zz Otro Nombre", "contrasena": "una contrasena distinta"})
 revisar("el MISMO correo vuelve a dar 202, no 409 (RN-061)", s == 202, (s, repetido))
 revisar("y con el mismo cuerpo: nada distingue un correo nuevo de uno existente",
         repetido == cuerpo, (cuerpo, repetido))
@@ -205,11 +215,11 @@ revisar("quien se registro con contrasena la tiene", yo["tieneContrasena"] is Tr
 revisar("y su correo nace sin verificar: comprar no lo exige (RN-063)",
         yo["emailVerificado"] is False, yo)
 revisar("el registro duplicado NO piso el nombre de la cuenta existente (RN-061)",
-        yo["nombre"] == "Cliente Humo", yo["nombre"])
+        yo["nombre"] == NOMBRE, yo["nombre"])
 
-s, yo, _ = pedir("PUT", "/cuenta/yo", {"nombre": "Cliente Humo Editado", "telefono": "988777666"}, token=token)
+s, yo, _ = pedir("PUT", "/cuenta/yo", {"nombre": NOMBRE_EDITADO, "telefono": "988777666"}, token=token)
 revisar("PUT /cuenta/yo cambia nombre y telefono",
-        s == 200 and yo["nombre"] == "Cliente Humo Editado" and yo["telefono"] == "988777666", (s, yo))
+        s == 200 and yo["nombre"] == NOMBRE_EDITADO and yo["telefono"] == "988777666", (s, yo))
 revisar("y no cambia el correo, que es la identidad (RN-060)", yo["email"] == EMAIL, yo)
 
 s, cuerpo, _ = pedir("PUT", "/cuenta/yo", {"telefono": "988777666"}, token=token)
@@ -220,7 +230,7 @@ print("\n=== 6. Direcciones con ubigeo ===")
 s, lista, _ = pedir("GET", "/cuenta/direcciones", token=token)
 revisar("una cuenta recien creada no tiene direcciones", s == 200 and lista == [], (s, lista))
 
-primera = {"distritoId": DISTRITO, "etiqueta": "Casa", "destinatario": "Cliente Humo",
+primera = {"distritoId": DISTRITO, "etiqueta": "Casa", "destinatario": NOMBRE,
            "telefono": "999888777", "calle": "Av. Los Olivos", "numero": "123",
            "referencia": "Piso 4", "codigoPostal": "15074",
            "latitud": -12.0464, "longitud": -77.0428, "predeterminada": False}
@@ -286,7 +296,7 @@ revisar("una etiqueta vacia -> 400 VALIDATION_ERROR",
 # cuenta de la semilla haria que la segunda ejecucion dependiera de la primera.
 EMAIL_INTRUSO = "humo-intruso-%s@ejemplo.pe" % SUFIJO
 pedir("POST", "/cuenta/registro",
-      {"email": EMAIL_INTRUSO, "nombre": "Intruso", "contrasena": CONTRASENA})
+      {"email": EMAIL_INTRUSO, "nombre": NOMBRE_INTRUSO, "contrasena": CONTRASENA})
 s, intruso, _ = pedir("POST", "/cuenta/acceso", {"email": EMAIL_INTRUSO, "contrasena": CONTRASENA})
 token_intruso = intruso["tokenAcceso"] if s == 200 else None
 revisar("el segundo cliente entra", s == 200, s)
@@ -353,7 +363,171 @@ revisar("la lista se queda vacia", s == 200 and favoritos == [], (s, favoritos))
 s, cuerpo, _ = pedir("GET", "/cuenta/favoritos")
 revisar("los favoritos exigen sesion -> 401", s == 401, s)
 
-print("\n=== 9. Cambiar la contrasena (RN-065) ===")
+print("\n=== 9. Opiniones (RN-090 ... RN-095) ===")
+# El escenario se monta aqui mismo: el producto sale del catalogo, la opinion
+# la escribe la cuenta recien creada y al final se retira, asi que el producto
+# vuelve al conteo que tenia y la prueba se puede repetir.
+s, catalogo, _ = pedir("GET", "/productos?tamanoPagina=1")
+PRODUCTO_OP = catalogo["items"][0]["id"]
+SLUG_OP = catalogo["items"][0]["slug"]
+
+s, ficha0, _ = pedir("GET", "/productos/" + SLUG_OP)
+CONTEO_ANTES = ficha0["calificacionConteo"]
+
+s, cuerpo, _ = pedir("GET", "/cuenta/opiniones/producto/%d" % PRODUCTO_OP, token=token)
+revisar("quien no ha opinado no tiene opinion propia -> 404 REVIEW_NOT_FOUND",
+        s == 404 and cuerpo["code"] == "REVIEW_NOT_FOUND", (s, cuerpo.get("code")))
+
+nueva = {"productoId": PRODUCTO_OP, "calificacion": 5, "titulo": "Cumple lo que promete",
+         "cuerpo": "Lo pedi para una reforma pequena y llego cuando dijeron."}
+s, mia, _ = pedir("POST", "/cuenta/opiniones", nueva, token=token)
+revisar("escribir la propia -> 201", s == 201, (s, mia))
+revisar("y vuelve con su id, no con id nulo", s == 201 and mia.get("id") is not None, mia)
+OPINION = mia["id"] if s == 201 else None
+revisar("el autor se publica abreviado, no con el nombre completo",
+        mia.get("autor") and mia["autor"].count(" ") <= 1, mia.get("autor"))
+revisar("una cuenta sin compras no lleva insignia (RN-092)",
+        mia.get("compraVerificada") is False, mia.get("compraVerificada"))
+revisar("recien escrita no figura como editada", mia.get("editada") is False, mia.get("editada"))
+revisar("la respuesta no lleva el correo ni el id del cliente",
+        "email" not in mia and "clienteId" not in mia, list(mia))
+
+s, cuerpo, _ = pedir("POST", "/cuenta/opiniones", nueva, token=token)
+revisar("una segunda opinion sobre el mismo producto -> 409 DUPLICATE_REVIEW (RN-090)",
+        s == 409 and cuerpo["code"] == "DUPLICATE_REVIEW", (s, cuerpo.get("code")))
+revisar("y el error dice cual es la que ya existe, para poder editarla",
+        cuerpo.get("opinionId") == OPINION, (cuerpo.get("opinionId"), OPINION))
+
+s, ficha1, _ = pedir("GET", "/productos/" + SLUG_OP)
+revisar("el conteo del producto sube en uno (RN-093)",
+        ficha1["calificacionConteo"] == CONTEO_ANTES + 1,
+        (CONTEO_ANTES, ficha1["calificacionConteo"]))
+revisar("las barras del desglose suman el conteo",
+        sum(d["cantidad"] for d in ficha1["desgloseCalificacion"]) == ficha1["calificacionConteo"],
+        ficha1["desgloseCalificacion"])
+
+
+def promedio_esperado(ficha):
+    """La media que deberia salir del desglose que devuelve la propia ficha."""
+    conteo = ficha["calificacionConteo"]
+    if conteo == 0:
+        return 0.0
+    return round(sum(d["estrellas"] * d["cantidad"] for d in ficha["desgloseCalificacion"]) / conteo, 1)
+
+
+revisar("el promedio es la media de las opiniones vivas, no un numero escrito (RN-093)",
+        abs(float(ficha1["calificacionPromedio"]) - promedio_esperado(ficha1)) <= 0.05,
+        (ficha1["calificacionPromedio"], promedio_esperado(ficha1)))
+
+s, publicas, _ = pedir("GET", "/productos/%s/opiniones?tamanoPagina=48" % SLUG_OP)
+revisar("la opinion aparece en el listado publico del producto",
+        any(o["id"] == OPINION for o in publicas["items"]), [o["id"] for o in publicas["items"]][:5])
+
+s, recuperada, _ = pedir("GET", "/cuenta/opiniones/producto/%d" % PRODUCTO_OP, token=token)
+revisar("ahora si hay opinion propia: la ficha puede ofrecer editarla en vez de crear otra",
+        s == 200 and recuperada["id"] == OPINION, (s, recuperada))
+
+s, cuerpo, _ = pedir("POST", "/cuenta/opiniones",
+                     dict(nueva, calificacion=0), token=token)
+revisar("una nota de 0 -> 400 VALIDATION_ERROR (RN-095)",
+        s == 400 and cuerpo["code"] == "VALIDATION_ERROR", (s, cuerpo.get("code")))
+revisar("y el error senala el campo calificacion",
+        cuerpo.get("errors") and cuerpo["errors"][0]["field"] == "calificacion", cuerpo.get("errors"))
+
+s, cuerpo, _ = pedir("POST", "/cuenta/opiniones", dict(nueva, calificacion=6), token=token)
+revisar("una nota de 6 tampoco", s == 400 and cuerpo["code"] == "VALIDATION_ERROR",
+        (s, cuerpo.get("code")))
+
+s, cuerpo, _ = pedir("POST", "/cuenta/opiniones", dict(nueva, titulo="   "), token=token)
+revisar("un titulo en blanco -> 400: una nota sin texto no es una opinion (RN-095)",
+        s == 400 and cuerpo["code"] == "VALIDATION_ERROR", (s, cuerpo.get("code")))
+
+s, cuerpo, _ = pedir("POST", "/cuenta/opiniones", dict(nueva, cuerpo="x" * 2001), token=token)
+revisar("un cuerpo de mas de 2000 caracteres -> 400",
+        s == 400 and cuerpo["code"] == "VALIDATION_ERROR", (s, cuerpo.get("code")))
+
+s, cuerpo, _ = pedir("POST", "/cuenta/opiniones", dict(nueva, productoId=999999), token=token)
+revisar("opinar de un producto inexistente -> 404 PRODUCT_NOT_FOUND (RN-091)",
+        s == 404 and cuerpo["code"] == "PRODUCT_NOT_FOUND", (s, cuerpo.get("code")))
+
+s, cuerpo, _ = pedir("POST", "/cuenta/opiniones", nueva)
+revisar("opinar sin sesion -> 401 UNAUTHENTICATED (RN-091)",
+        s == 401 and cuerpo["code"] == "UNAUTHENTICATED", (s, cuerpo.get("code")))
+
+s, editada, _ = pedir("PUT", "/cuenta/opiniones/%d" % OPINION,
+                      {"calificacion": 2, "titulo": "Bajo mi nota",
+                       "cuerpo": "Tras un mes de uso no aguanta lo que esperaba."}, token=token)
+revisar("editar la propia -> 200 con la nota nueva",
+        s == 200 and editada["calificacion"] == 2, (s, editada))
+revisar("y queda marcada como editada: el texto cambio despues de publicarse",
+        editada.get("editada") is True, editada.get("editada"))
+
+s, ficha2, _ = pedir("GET", "/productos/" + SLUG_OP)
+revisar("editar la nota vuelve a derivar el promedio (RN-093)",
+        abs(float(ficha2["calificacionPromedio"]) - promedio_esperado(ficha2)) <= 0.05,
+        (ficha2["calificacionPromedio"], promedio_esperado(ficha2)))
+revisar("y el conteo no cambia al editar",
+        ficha2["calificacionConteo"] == CONTEO_ANTES + 1, ficha2["calificacionConteo"])
+
+s, cuerpo, _ = pedir("PUT", "/cuenta/opiniones/%d" % OPINION,
+                     {"calificacion": 1, "titulo": "Secuestrada", "cuerpo": "No es mia."},
+                     token=token_intruso)
+revisar("la opinion de otro cliente es 404, no 403: no se confirma que exista (RN-094)",
+        s == 404 and cuerpo["code"] == "REVIEW_NOT_FOUND", (s, cuerpo.get("code")))
+
+s, cuerpo, _ = pedir("DELETE", "/cuenta/opiniones/%d" % OPINION, token=token_intruso)
+revisar("ni se puede retirar la de otro", s == 404, s)
+
+# Una por persona y producto, no una por producto: el segundo cliente tiene
+# derecho a opinar de lo mismo.
+s, suya, _ = pedir("POST", "/cuenta/opiniones",
+                   {"productoId": PRODUCTO_OP, "calificacion": 4, "titulo": "A mi si me sirvio",
+                    "cuerpo": "Otro cliente, otra opinion sobre el mismo producto."},
+                   token=token_intruso)
+revisar("otro cliente si puede opinar del mismo producto (RN-090)", s == 201, (s, suya))
+OPINION_INTRUSO = suya["id"] if s == 201 else None
+
+s, ficha3, _ = pedir("GET", "/productos/" + SLUG_OP)
+revisar("y el conteo sube a dos", ficha3["calificacionConteo"] == CONTEO_ANTES + 2,
+        ficha3["calificacionConteo"])
+
+s, _, _ = pedir("DELETE", "/cuenta/opiniones/%d" % OPINION, token=token)
+revisar("retirar la propia -> 204 (RN-094)", s == 204, s)
+
+s, publicas, _ = pedir("GET", "/productos/%s/opiniones?tamanoPagina=48" % SLUG_OP)
+revisar("desaparece del listado publico",
+        all(o["id"] != OPINION for o in publicas["items"]), [o["id"] for o in publicas["items"]][:5])
+
+s, ficha4, _ = pedir("GET", "/productos/" + SLUG_OP)
+revisar("el promedio se recalcula sin ella (RN-093)",
+        abs(float(ficha4["calificacionPromedio"]) - promedio_esperado(ficha4)) <= 0.05,
+        (ficha4["calificacionPromedio"], promedio_esperado(ficha4)))
+
+s, cuerpo, _ = pedir("GET", "/cuenta/opiniones/producto/%d" % PRODUCTO_OP, token=token)
+revisar("y vuelve a no haber opinion propia -> 404", s == 404, s)
+
+s, cuerpo, _ = pedir("DELETE", "/cuenta/opiniones/%d" % OPINION, token=token)
+revisar("retirarla otra vez -> 404, no un 500", s == 404 and cuerpo["code"] == "REVIEW_NOT_FOUND",
+        (s, cuerpo.get("code")))
+
+# El indice unico es parcial: retirar la suya libera el sitio. Lo contrario
+# condenaria al silencio a quien se arrepintio de lo que escribio.
+s, otra, _ = pedir("POST", "/cuenta/opiniones",
+                   {"productoId": PRODUCTO_OP, "calificacion": 4, "titulo": "Vuelvo a opinar",
+                    "cuerpo": "Retire la anterior y escribo otra desde cero."}, token=token)
+revisar("tras retirar la suya se puede volver a opinar -> 201 (RN-090, RN-094)", s == 201, (s, otra))
+
+# Y se deja el producto como estaba: la prueba no acumula opiniones entre
+# ejecuciones aunque cada una use una cuenta distinta.
+pedir("DELETE", "/cuenta/opiniones/%d" % otra["id"], token=token)
+if OPINION_INTRUSO:
+    pedir("DELETE", "/cuenta/opiniones/%d" % OPINION_INTRUSO, token=token_intruso)
+s, fichaFinal, _ = pedir("GET", "/productos/" + SLUG_OP)
+revisar("al terminar, el producto vuelve al conteo que tenia",
+        fichaFinal["calificacionConteo"] == CONTEO_ANTES,
+        (CONTEO_ANTES, fichaFinal["calificacionConteo"]))
+
+print("\n=== 10. Cambiar la contrasena (RN-065) ===")
 s, cuerpo, _ = pedir("POST", "/cuenta/yo/contrasena", {"contrasenaNueva": CONTRASENA_NUEVA}, token=token)
 revisar("sin la actual, a quien SI la tiene -> 400 VALIDATION_ERROR (RN-065)",
         s == 400 and cuerpo["code"] == "VALIDATION_ERROR", (s, cuerpo.get("code")))
@@ -383,7 +557,7 @@ s, cuerpo, _ = pedir("POST", "/cuenta/acceso", {"email": EMAIL, "contrasena": CO
 revisar("y ya no con la vieja -> 401", s == 401 and cuerpo["code"] == "INVALID_CREDENTIALS",
         (s, cuerpo.get("code")))
 
-print("\n=== 10. Rotacion del refresco ===")
+print("\n=== 11. Rotacion del refresco ===")
 s, sesion, cab = pedir("POST", "/cuenta/acceso", {"email": EMAIL, "contrasena": CONTRASENA_NUEVA})
 refresco = refresco_de(cab)
 token = sesion["tokenAcceso"]
@@ -430,7 +604,7 @@ s, cuerpo, _ = pedir("POST", "/cuenta/acceso", {"email": EMAIL, "contrasena": CO
                      token="un.token.caducado")
 revisar("y entrar con un token viejo colgando tampoco falla", s == 200, (s, cuerpo.get("code")))
 
-print("\n=== 11. Acceso con Google ===")
+print("\n=== 12. Acceso con Google ===")
 s, cuerpo, _ = pedir("POST", "/cuenta/google", {"credencial": "no.es.un.token.de.google"})
 if s == 503:
     revisar("sin GOOGLE_CLIENT_ID el endpoint lo dice claro -> 503 GOOGLE_NOT_CONFIGURED",
@@ -445,7 +619,7 @@ s, cuerpo, _ = pedir("POST", "/cuenta/google", {})
 revisar("sin credencial -> 400 VALIDATION_ERROR", s == 400 and cuerpo["code"] == "VALIDATION_ERROR",
         (s, cuerpo.get("code")))
 
-print("\n=== 12. Limite de intentos (RN-068) ===")
+print("\n=== 13. Limite de intentos (RN-068) ===")
 # Desde una IP propia: agotar el limite en la IP de la prueba dejaria sin
 # ejecutar lo que venga despues.
 IP_ATAQUE = "198.51.100." + SUFIJO[:2]

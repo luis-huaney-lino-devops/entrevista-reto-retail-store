@@ -21,6 +21,7 @@ import com.retailstore.api.comun.error.ExcepcionAplicacion;
 import com.retailstore.api.comun.paginacion.RespuestaPagina;
 import com.retailstore.api.comun.texto.Slug;
 import com.retailstore.api.notificacion.servicio.AvisosDeStock;
+import com.retailstore.api.opinion.servicio.ResumenOpiniones;
 import java.math.BigDecimal;
 import java.time.Clock;
 import java.util.ArrayList;
@@ -44,16 +45,18 @@ public class ServicioProducto {
     private final MarcaRepositorio marcas;
     private final ServicioArchivo archivos;
     private final AvisosDeStock avisos;
+    private final ResumenOpiniones opiniones;
     private final Clock reloj;
 
     public ServicioProducto(ProductoRepositorio productos, SubcategoriaRepositorio subcategorias,
                             MarcaRepositorio marcas, ServicioArchivo archivos,
-                            AvisosDeStock avisos, Clock reloj) {
+                            AvisosDeStock avisos, ResumenOpiniones opiniones, Clock reloj) {
         this.productos = productos;
         this.subcategorias = subcategorias;
         this.marcas = marcas;
         this.archivos = archivos;
         this.avisos = avisos;
+        this.opiniones = opiniones;
         this.reloj = reloj;
     }
 
@@ -197,7 +200,10 @@ public class ServicioProducto {
     public ProductoDetalleRespuesta porSlug(String slug) {
         Producto producto = buscarVisible(slug);
         productos.sumarVista(producto.getId());
-        return ProductoDetalleRespuesta.de(producto);
+        // El desglose por estrellas es una consulta agregada más, y va aquí y no
+        // en una llamada aparte porque se pinta justo debajo del nombre: pedirlo
+        // por separado sería un segundo viaje para la mitad de un dato.
+        return ProductoDetalleRespuesta.de(producto, opiniones.desgloseDe(producto.getId()));
     }
 
     /** RN-025: hasta 4 de la misma subcategoría, excluyendo el actual. */

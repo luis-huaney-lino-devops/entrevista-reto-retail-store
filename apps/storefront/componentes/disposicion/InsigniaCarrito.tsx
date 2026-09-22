@@ -1,6 +1,6 @@
 'use client'
 
-import { Heart, Scale, ShoppingCart } from 'lucide-react'
+import { ArrowLeftRight, Heart, ShoppingCart } from 'lucide-react'
 import Link from 'next/link'
 
 import { useAccionesCarrito, useCarrito } from '@/funcionalidades/carrito/ProveedorCarrito'
@@ -47,7 +47,7 @@ export function ContadoresCabecera() {
         aria-label="Comparador de productos"
         className="relative inline-flex h-10 w-10 items-center justify-center rounded-marca text-tinta transition hover:bg-tinta-suave"
       >
-        <Scale size={19} aria-hidden />
+        <ArrowLeftRight size={19} aria-hidden />
         <Contador valor={cmpMontado ? productos.length : 0} />
       </Link>
 

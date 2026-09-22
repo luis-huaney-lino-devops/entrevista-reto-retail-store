@@ -44,6 +44,7 @@ public enum CodigoError {
     FILE_NOT_FOUND(HttpStatus.NOT_FOUND, "Archivo no encontrado"),
     ADMIN_NOT_FOUND(HttpStatus.NOT_FOUND, "Administrador no encontrado"),
     ADDRESS_NOT_FOUND(HttpStatus.NOT_FOUND, "Dirección no encontrada"),
+    REVIEW_NOT_FOUND(HttpStatus.NOT_FOUND, "Opinión no encontrada"),
     DISTRICT_NOT_FOUND(HttpStatus.NOT_FOUND, "Distrito no encontrado"),
     RESOURCE_NOT_FOUND(HttpStatus.NOT_FOUND, "Recurso no encontrado"),
 
@@ -53,6 +54,7 @@ public enum CodigoError {
     DUPLICATE_NAME(HttpStatus.CONFLICT, "Nombre duplicado"),
     DUPLICATE_COUPON_CODE(HttpStatus.CONFLICT, "Código de cupón duplicado"),
     DUPLICATE_USERNAME(HttpStatus.CONFLICT, "Usuario duplicado"),
+    DUPLICATE_REVIEW(HttpStatus.CONFLICT, "Ya opinaste sobre este producto"),
     HAS_DEPENDENTS(HttpStatus.CONFLICT, "Tiene contenido asociado"),
     INSUFFICIENT_STOCK(HttpStatus.CONFLICT, "Stock insuficiente"),
     CONCURRENT_MODIFICATION(HttpStatus.CONFLICT, "Modificación concurrente"),

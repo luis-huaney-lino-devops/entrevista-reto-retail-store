@@ -17,6 +17,12 @@ import { MenuCuenta } from './MenuCuenta'
  * son solo las cuatro que tienen estado —buscador, menu de categorias,
  * contadores y cuenta— y cada una es diminuta.
  *
+ * **No hay tira horizontal de categorias.** La hubo, y con diez categorias no
+ * cabia: obligaba a arrastrar para llegar al final y las flechas laterales eran
+ * un parche sobre el problema, no una solucion. Todo el arbol —"Todo el
+ * catalogo" incluido— vive ahora en `<MenuCategorias/>`, que lo ensena
+ * entero de una vez y se maneja con teclado.
+ *
  * El error tipico seria marcar la cabecera entera con `'use client'` porque el
  * carrito necesita estado: eso convertiria todo su subarbol en cliente y se
  * perderia la razon por la que se eligio Next.
@@ -64,31 +70,6 @@ export async function Cabecera() {
           <MenuCuenta />
         </div>
       </div>
-
-      {/* Fila de categorias para pantallas medianas y grandes. En movil se
-          llega por el catalogo, que ya tiene el filtro completo. */}
-      <nav aria-label="Categorias destacadas" className="hidden border-t border-borde bg-superficie-alt lg:block">
-        <ul className="mx-auto flex max-w-7xl items-center gap-1 overflow-x-auto px-6 py-1.5">
-          <li>
-            <Link
-              href="/productos"
-              className="inline-block whitespace-nowrap rounded-marca px-2.5 py-1.5 text-[13px] font-semibold text-texto-medio transition hover:bg-white hover:text-marca-oscura"
-            >
-              Todo el catalogo
-            </Link>
-          </li>
-          {categorias.slice(0, 8).map((c) => (
-            <li key={c.id}>
-              <Link
-                href={`/c/${c.slug}`}
-                className="inline-block whitespace-nowrap rounded-marca px-2.5 py-1.5 text-[13px] text-texto-medio transition hover:bg-white hover:text-marca-oscura"
-              >
-                {c.nombre}
-              </Link>
-            </li>
-          ))}
-        </ul>
-      </nav>
     </header>
   )
 }

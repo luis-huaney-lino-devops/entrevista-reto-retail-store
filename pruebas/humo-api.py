@@ -586,6 +586,115 @@ revisar("sigue en la papelera, no se perdió", fila is not None,
         [e["nombre"] for e in papelera[:5]])
 revisar("y consta quién lo eliminó", fila and fila["eliminadoPor"] == "admin", fila)
 
+print("\n=== 16. Opiniones públicas (RN-090 … RN-095) ===")
+# El escenario lo deja la semilla: opiniones derivadas de órdenes ENTREGADAS,
+# con su insignia, y productos sin ninguna. Aquí solo se lee -escribir exige
+# sesión de cliente y eso lo cubre humo-cuenta.py-, así que esta sección no
+# deja nada detrás y se puede repetir tantas veces como haga falta.
+s, mejores, _ = pedir("GET", "/productos?orden=calificacion&tamanoPagina=48")
+conOpiniones = next((p for p in mejores["items"] if (p.get("calificacionConteo") or 0) >= 2), None)
+revisar("la semilla deja productos con opiniones reales", conOpiniones is not None,
+        [(p["slug"], p.get("calificacionConteo")) for p in mejores["items"][:3]])
+
+s, ultima, _ = pedir("GET", "/productos?orden=calificacion&tamanoPagina=48&pagina=%d"
+                     % mejores["totalPaginas"])
+sinOpiniones = next((p for p in ultima["items"] if (p.get("calificacionConteo") or 0) == 0), None)
+
+if conOpiniones:
+    slugOp = conOpiniones["slug"]
+    s, opiniones, cab = pedir("GET", "/productos/%s/opiniones" % slugOp)
+    revisar("GET /productos/{slug}/opiniones sin sesión -> 200", s == 200, s)
+    revisar("viene paginado con el mismo sobre que el catálogo",
+            {"items", "pagina", "tamanoPagina", "totalItems", "totalPaginas"} <= set(opiniones),
+            list(opiniones))
+    revisar("toda respuesta lleva identificador de correlación", "X-Correlation-Id" in cab)
+
+    primera = opiniones["items"][0]
+    revisar("cada opinión trae nota, título, cuerpo y fecha",
+            {"calificacion", "titulo", "cuerpo", "creadoEn", "compraVerificada", "autor"} <= set(primera),
+            list(primera))
+    revisar("la nota está entre 1 y 5 (RN-095)", 1 <= primera["calificacion"] <= 5,
+            primera["calificacion"])
+    revisar("el autor sale abreviado: nombre y letra del apellido",
+            primera["autor"].count(" ") <= 1, primera["autor"])
+    revisar("un endpoint público NO expone el correo ni el id del cliente",
+            "email" not in primera and "clienteId" not in primera and "cliente" not in primera,
+            list(primera))
+
+    revisar("el total de opiniones cuadra con el conteo del producto (RN-093)",
+            opiniones["totalItems"] == conOpiniones["calificacionConteo"],
+            (opiniones["totalItems"], conOpiniones["calificacionConteo"]))
+
+    s, ficha, _ = pedir("GET", "/productos/" + slugOp)
+    desglose = ficha.get("desgloseCalificacion")
+    revisar("la ficha trae el desglose por estrellas, de 5 a 1",
+            desglose and [d["estrellas"] for d in desglose] == [5, 4, 3, 2, 1], desglose)
+    revisar("vienen las cinco barras aunque alguna valga cero",
+            desglose and len(desglose) == 5, len(desglose) if desglose else None)
+    revisar("las barras suman exactamente el conteo",
+            sum(d["cantidad"] for d in desglose) == ficha["calificacionConteo"],
+            (sum(d["cantidad"] for d in desglose), ficha["calificacionConteo"]))
+    esperado = round(sum(d["estrellas"] * d["cantidad"] for d in desglose)
+                     / max(1, ficha["calificacionConteo"]), 1)
+    revisar("y el promedio es esa media, no un número escrito a mano (RN-093)",
+            abs(float(ficha["calificacionPromedio"]) - esperado) <= 0.05,
+            (ficha["calificacionPromedio"], esperado))
+    revisar("el porcentaje lo calcula el servidor",
+            all(0 <= d["porcentaje"] <= 100 for d in desglose), desglose)
+
+    s, paginada, _ = pedir("GET", "/productos/%s/opiniones?tamanoPagina=1" % slugOp)
+    s2, segunda, _ = pedir("GET", "/productos/%s/opiniones?tamanoPagina=1&pagina=2" % slugOp)
+    revisar("la paginación tiene orden total: la página 2 no repite la 1",
+            paginada["items"][0]["id"] != segunda["items"][0]["id"],
+            (paginada["items"][0]["id"], segunda["items"][0]["id"]))
+
+    s, porNota, _ = pedir("GET", "/productos/%s/opiniones?orden=mejores&tamanoPagina=48" % slugOp)
+    notas = [o["calificacion"] for o in porNota["items"]]
+    revisar("orden=mejores devuelve de mayor a menor nota",
+            s == 200 and all(a >= b for a, b in zip(notas, notas[1:])), notas)
+
+    s, cuerpo, _ = pedir("GET", "/productos/%s/opiniones?orden=inventado" % slugOp)
+    revisar("un orden desconocido -> 400 VALIDATION_ERROR",
+            s == 400 and cuerpo["code"] == "VALIDATION_ERROR", (s, cuerpo.get("code")))
+    revisar("y el error señala el campo orden",
+            cuerpo.get("errors") and cuerpo["errors"][0]["field"] == "orden", cuerpo.get("errors"))
+
+    s, cuerpo, _ = pedir("GET", "/productos/%s/opiniones?tamanoPagina=99" % slugOp)
+    revisar("una página de 99 se rechaza, no se recorta (RN-024)",
+            s == 400 and cuerpo["code"] == "VALIDATION_ERROR", (s, cuerpo.get("code")))
+
+# La insignia tiene que existir de verdad en los datos de demostración: si la
+# semilla dejara de sembrar órdenes ENTREGADAS, nadie se enteraría.
+hayVerificada = False
+for p in mejores["items"][:5]:
+    s, lista, _ = pedir("GET", "/productos/%s/opiniones?tamanoPagina=48" % p["slug"])
+    if s == 200 and any(o["compraVerificada"] for o in lista["items"]):
+        hayVerificada = True
+        break
+revisar("hay opiniones de compra verificada en los datos de demostración (RN-092)", hayVerificada)
+
+if sinOpiniones:
+    s, vacias, _ = pedir("GET", "/productos/%s/opiniones" % sinOpiniones["slug"])
+    revisar("un producto sin opiniones devuelve una página vacía, no un 404",
+            s == 200 and vacias["items"] == [] and vacias["totalItems"] == 0, (s, vacias))
+    s, ficha0, _ = pedir("GET", "/productos/" + sinOpiniones["slug"])
+    revisar("y su promedio es 0 con conteo 0: cero no es «malo», es «todavía nadie»",
+            float(ficha0["calificacionPromedio"]) == 0 and ficha0["calificacionConteo"] == 0,
+            (ficha0["calificacionPromedio"], ficha0["calificacionConteo"]))
+    revisar("su desglose son cinco ceros, no una lista vacía",
+            len(ficha0["desgloseCalificacion"]) == 5
+            and all(d["cantidad"] == 0 and d["porcentaje"] == 0 for d in ficha0["desgloseCalificacion"]),
+            ficha0["desgloseCalificacion"])
+
+s, cuerpo, _ = pedir("GET", "/productos/no-existe-nada/opiniones")
+revisar("las opiniones de un producto inexistente -> 404 PRODUCT_NOT_FOUND",
+        s == 404 and cuerpo["code"] == "PRODUCT_NOT_FOUND", (s, cuerpo.get("code")))
+
+s, cuerpo, _ = pedir("POST", "/cuenta/opiniones",
+                     {"productoId": 1, "calificacion": 5, "titulo": "Anónima", "cuerpo": "Sin cuenta."})
+revisar("opinar sin sesión -> 401: no hay opiniones anónimas (RN-091)",
+        s == 401 and cuerpo["code"] == "UNAUTHENTICATED", (s, cuerpo.get("code")))
+
 print("\n" + "=" * 60)
 print("PASAN %d   FALLAN %d" % (ok, len(fallos)))
 for f in fallos:

@@ -26,6 +26,26 @@ public interface OrdenRepositorio extends JpaRepository<Orden, Long> {
     List<Orden> findByClienteIdOrderByCreadoEnDesc(Long idCliente);
 
     /**
+     * Si este cliente llegó a recibir este producto (RN-092). Es lo que
+     * convierte una opinión en «compra verificada».
+     *
+     * <p>{@code ENTREGADA} y no {@code PAGADA}: la insignia afirma que quien
+     * escribe lo tuvo en las manos, y una orden pagada todavía puede estar en
+     * un almacén.
+     *
+     * <p>Se pregunta por las líneas y no por las órdenes porque la pregunta es
+     * por el producto: una orden entregada de otra cosa no verifica nada.
+     */
+    @Query("""
+            select count(i) > 0
+              from ItemOrden i
+             where i.orden.cliente.id = :idCliente
+               and i.producto.id = :idProducto
+               and i.orden.estado = com.retailstore.api.orden.dominio.EstadoOrden.ENTREGADA""")
+    boolean existeEntregadaConProducto(@Param("idCliente") Long idCliente,
+                                       @Param("idProducto") Long idProducto);
+
+    /**
      * Cuántas órdenes y cuánto gastó cada cliente de la página, en una sola
      * consulta. Una por cliente serían veintiuna para pintar veinte filas.
      */

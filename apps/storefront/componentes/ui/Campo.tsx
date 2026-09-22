@@ -16,7 +16,7 @@ import { clases } from '@/lib/formato'
 const BASE_CONTROL =
   'w-full rounded-marca border border-borde bg-white px-3 text-sm text-texto transition placeholder:text-texto-suave hover:border-borde-fuerte focus:border-tinta-claro disabled:cursor-not-allowed disabled:bg-superficie-alt disabled:text-texto-suave'
 
-type Comunes = {
+export type Comunes = {
   etiqueta: string
   error?: string | undefined
   ayuda?: string | undefined
@@ -25,7 +25,15 @@ type Comunes = {
   className?: string
 }
 
-function Envoltura({
+/**
+ * La envoltura comun: etiqueta, ayuda y error.
+ *
+ * Se exporta porque `<Combobox/>` no es un `<select>` pero tiene que parecerlo
+ * exactamente: misma etiqueta, mismo hueco de ayuda, mismo error con
+ * `role="alert"`. Duplicarla habria dejado dos sitios donde arreglar el mismo
+ * detalle de accesibilidad.
+ */
+export function CampoEnvoltura({
   etiqueta,
   error,
   ayuda,
@@ -64,7 +72,7 @@ export function CampoTexto({ etiqueta, error, ayuda, etiquetaOculta, className, 
   const generado = useId()
   const id = resto.id ?? generado
   return (
-    <Envoltura
+    <CampoEnvoltura
       etiqueta={etiqueta}
       error={error}
       ayuda={ayuda}
@@ -80,7 +88,7 @@ export function CampoTexto({ etiqueta, error, ayuda, etiquetaOculta, className, 
         aria-describedby={error ? `${id}-error` : ayuda ? `${id}-ayuda` : undefined}
         className={clases(BASE_CONTROL, 'h-10', error && 'border-peligro')}
       />
-    </Envoltura>
+    </CampoEnvoltura>
   )
 }
 
@@ -90,7 +98,7 @@ export function CampoSelect({ etiqueta, error, ayuda, etiquetaOculta, className,
   const generado = useId()
   const id = resto.id ?? generado
   return (
-    <Envoltura
+    <CampoEnvoltura
       etiqueta={etiqueta}
       error={error}
       ayuda={ayuda}
@@ -108,7 +116,7 @@ export function CampoSelect({ etiqueta, error, ayuda, etiquetaOculta, className,
       >
         {children}
       </select>
-    </Envoltura>
+    </CampoEnvoltura>
   )
 }
 
@@ -118,7 +126,7 @@ export function CampoArea({ etiqueta, error, ayuda, etiquetaOculta, className, .
   const generado = useId()
   const id = resto.id ?? generado
   return (
-    <Envoltura
+    <CampoEnvoltura
       etiqueta={etiqueta}
       error={error}
       ayuda={ayuda}
@@ -134,6 +142,6 @@ export function CampoArea({ etiqueta, error, ayuda, etiquetaOculta, className, .
         aria-describedby={error ? `${id}-error` : ayuda ? `${id}-ayuda` : undefined}
         className={clases(BASE_CONTROL, 'min-h-[84px] py-2', error && 'border-peligro')}
       />
-    </Envoltura>
+    </CampoEnvoltura>
   )
 }

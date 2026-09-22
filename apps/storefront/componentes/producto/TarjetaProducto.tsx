@@ -17,12 +17,23 @@ import { Precio } from './Precio'
  * que son tres botones.
  *
  * El efecto al pasar el raton es **CSS puro** (`group-hover`), sin estado y sin
- * una sola linea de JS: la tarjeta se levanta, la imagen se acerca un poco y la
- * fila de acciones sube desde abajo. `group-focus-within` hace lo mismo cuando
- * el foco entra por teclado, que es lo que evita que las acciones sean
- * inalcanzables sin raton. Y en pantallas tactiles —donde "pasar el raton" no
- * existe— las acciones estan visibles siempre: el estado oculto solo se aplica
- * a partir de `sm`.
+ * una sola linea de JS: la tarjeta se levanta y la imagen se acerca un poco.
+ * `group-focus-within` hace lo mismo cuando el foco entra por teclado, que es
+ * lo que evita que las acciones sean inalcanzables sin raton.
+ *
+ * **Pasar el raton no mueve ni un pixel de la rejilla.** Antes la fila de
+ * acciones crecia de `max-h-0` a `max-h-24` al hacer hover, y eso es altura:
+ * la tarjeta se estiraba, la fila del grid se estiraba con ella y las tarjetas
+ * vecinas daban un salto. Ahora la fila **ocupa su sitio desde el primer
+ * pintado** y lo unico que cambia es la opacidad, que no esta en el flujo del
+ * documento. Lo mismo vale para el `-translate-y-0.5` y el `scale` de la
+ * imagen: son transformaciones, no reflujo.
+ *
+ * El estado invisible se gatea con `raton:` —`(hover: hover) and (pointer:
+ * fine)`— y no con `sm:`. En tactil no hay hover, asi que ahi las acciones
+ * estan siempre visibles y **no queda ningun hueco reservado**: el espacio que
+ * ocupan es el que usan. Reservar por ancho de pantalla dejaba a una tablet
+ * ancha con un hueco que nunca se rellenaba.
  *
  * Un detalle de maquetacion que importa: el enlace se estira sobre la tarjeta
  * con un pseudo-elemento (`after:absolute after:inset-0`) en vez de envolverla.
@@ -116,12 +127,19 @@ export function TarjetaProducto({ producto, prioritaria = false, className }: Pr
       </div>
 
       {/* La fila de acciones. `relative z-10` la pone por encima del enlace
-          estirado; sin eso, los clics irian a parar a la ficha del producto. */}
+          estirado; sin eso, los clics irian a parar a la ficha del producto.
+
+          Nada de lo que cambia al hacer hover afecta al flujo: solo `opacity` y
+          `pointer-events`. Ninguna altura, ningun margen, ningun `display`.
+          `pointer-events-none` mientras esta invisible evita que se pulse un
+          boton que no se ve, y no estorba al hover porque el evento cae en la
+          tarjeta, que es el propio `group`. */}
       <div
         className={clases(
           'relative z-10 px-3.5 pb-3.5',
-          'sm:max-h-0 sm:overflow-hidden sm:opacity-0 sm:transition-all sm:duration-200',
-          'sm:group-hover:max-h-24 sm:group-hover:opacity-100 sm:group-focus-within:max-h-24 sm:group-focus-within:opacity-100',
+          'raton:pointer-events-none raton:opacity-0 raton:transition-opacity raton:duration-200',
+          'raton:group-hover:pointer-events-auto raton:group-hover:opacity-100',
+          'raton:group-focus-within:pointer-events-auto raton:group-focus-within:opacity-100',
         )}
       >
         <AccionesRapidas producto={producto} />

@@ -3702,10 +3702,12 @@ INSERT INTO producto (sku, nombre, slug, descripcion_corta, descripcion,
 SELECT v.sku, v.nombre, v.slug, v.descripcion_corta, v.descripcion,
        s.id_subcategoria, m.id_marca, v.precio, v.precio_anterior, v.stock,
        v.destacado, true,
-       -- Calificación estable a partir del SKU: un random() daría una
-       -- tienda distinta en cada máquina.
-       3.5 + (length(v.sku) % 4) * 0.4,
-       8 + (length(v.nombre) * 3) % 140
+       -- En cero, y no una fórmula sobre el SKU: el promedio y el conteo
+       -- se derivan de las opiniones reales (RN-093). Las opiniones de
+       -- demostración se siembran al final, después de las órdenes -la
+       -- insignia de compra verificada necesita una orden ENTREGADA-, y
+       -- es ese bloque el que deja estas dos columnas con su valor.
+       0, 0
 FROM (VALUES
     ('FER-CEMENT-001', 'Cemento Portland Tipo I 42.5 kg', 'cemento-portland-tipo-i-42-5-kg', 'Bolsa de 42.5 kg. Uso general en obras de concreto armado y albañilería.', 'Bolsa de 42.5 kg. Uso general en obras de concreto armado y albañilería.
 
@@ -5168,7 +5170,125 @@ JOIN LATERAL (
 ) p ON true;
 
 -- =========================================================================
--- 10. Conversaciones y notificaciones
+-- 10. Opiniones de demostración (RN-090 … RN-094)
+-- =========================================================================
+--
+-- Van después de las órdenes porque dependen de ellas: una opinión lleva la
+-- insignia de compra verificada cuando su autor tiene una orden ENTREGADA con
+-- ese producto (RN-092), y aquí eso se cumple de verdad en lugar de escribirse
+-- a mano.
+--
+-- El promedio y el conteo del producto NO se siembran: se derivan al final de
+-- este bloque con la misma sentencia que usa el servicio (RN-093). Si alguna
+-- vez el número de la tienda no cuadra con las opiniones que se leen, el
+-- defecto está en quien escribió la opinión, no en la ficha.
+
+-- Verificadas: una por (cliente, producto) salida de sus compras entregadas.
+-- La condición del módulo deja fuera dos de cada tres para que no todo producto
+-- comprado acabe con opinión -una tienda en la que opina el 100% de quien
+-- compra no se parece a ninguna tienda.
+INSERT INTO opinion (fk_id_producto, fk_id_cliente, calificacion, titulo, cuerpo,
+                     compra_verificada, creado_en, creado_por, actualizado_en, actualizado_por)
+SELECT DISTINCT ON (io.fk_id_producto, o.fk_id_cliente)
+       io.fk_id_producto,
+       o.fk_id_cliente,
+       v.calificacion,
+       v.titulo,
+       v.cuerpo,
+       true,
+       o.creado_en + interval '6 days',
+       'cliente:' || o.fk_id_cliente,
+       o.creado_en + interval '6 days',
+       'cliente:' || o.fk_id_cliente
+FROM orden o
+JOIN item_orden io ON io.fk_id_orden = o.id_orden
+JOIN LATERAL (
+    SELECT t.calificacion, t.titulo, t.cuerpo
+    FROM (VALUES
+        (0, 5, 'Cumple de sobra',
+            'Llegó bien embalado y funciona como esperaba. Lo uso casi a diario en obra y no me ha dado ni un problema.'),
+        (1, 4, 'Buena relación precio-calidad',
+            'Por lo que cuesta está muy bien. Le pongo cuatro y no cinco porque el acabado podría cuidarse más, pero cumple.'),
+        (2, 5, 'Lo volvería a comprar',
+            'Segunda vez que lo pido. Resistente, y esta vez llegó incluso antes de lo previsto.'),
+        (3, 3, 'Correcto, sin más',
+            'Hace lo que promete. Por las fotos esperaba algo más robusto, aunque para un uso ocasional va perfecto.'),
+        (4, 4, 'Aguanta el ritmo del taller',
+            'Lo tengo desde hace unas semanas y se le nota el uso diario sin que haya perdido nada.'),
+        (5, 5, 'El pedido llegó completo',
+            'Todo tal cual la descripción y bien protegido. Repetiré con esta tienda.'),
+        (6, 2, 'Esperaba más por el precio',
+            'A mí no terminó de convencerme: el material se siente liviano. No es malo, pero hay opciones mejores por ahí.'),
+        (7, 4, 'Buen material',
+            'Se nota la calidad en la mano. Le falta un estuche para guardarlo, y por eso no le doy las cinco.')
+    ) AS t(pos, calificacion, titulo, cuerpo)
+    WHERE t.pos = (io.fk_id_producto * 3 + o.fk_id_cliente) % 8
+) v ON true
+WHERE o.estado = 'ENTREGADA'
+  AND o.fk_id_cliente IS NOT NULL
+  AND (io.fk_id_producto + o.fk_id_cliente) % 3 = 0
+ORDER BY io.fk_id_producto, o.fk_id_cliente, o.creado_en;
+
+-- Sin compra verificada: opinar no exige haber comprado (RN-091), y la tienda
+-- tiene que poder enseñar las dos formas de la tarjeta -con insignia y sin
+-- ella- desde el primer arranque.
+INSERT INTO opinion (fk_id_producto, fk_id_cliente, calificacion, titulo, cuerpo,
+                     compra_verificada, creado_en, creado_por, actualizado_en, actualizado_por)
+SELECT p.id_producto,
+       c.id_cliente,
+       v.calificacion,
+       v.titulo,
+       v.cuerpo,
+       false,
+       now() - make_interval(days => ((c.id_cliente * 5 + p.id_producto) % 45)::int),
+       'cliente:' || c.id_cliente,
+       now() - make_interval(days => ((c.id_cliente * 5 + p.id_producto) % 45)::int),
+       'cliente:' || c.id_cliente
+FROM cliente c
+JOIN LATERAL (
+    SELECT id_producto FROM producto
+    WHERE activo
+      AND eliminado_en IS NULL
+      AND (id_producto * 11 + c.id_cliente) % 23 = 0
+      AND NOT EXISTS (
+          SELECT 1 FROM opinion o
+           WHERE o.fk_id_producto = producto.id_producto AND o.fk_id_cliente = c.id_cliente)
+    ORDER BY id_producto
+    LIMIT 2
+) p ON true
+JOIN LATERAL (
+    SELECT t.calificacion, t.titulo, t.cuerpo
+    FROM (VALUES
+        (0, 4, 'Justo lo que buscaba',
+            'Lo tenía fichado hace tiempo y coincide con lo que dice la ficha. Sin sorpresas.'),
+        (1, 5, 'Muy buena compra',
+            'La marca no falla y el precio está por debajo de lo que vi en otros sitios.'),
+        (2, 3, 'Bien para empezar',
+            'Para un uso casero cumple de sobra. Si le vas a dar mucha caña, mira algo de gama superior.'),
+        (3, 4, 'Cumple lo que promete',
+            'Ni más ni menos que lo anunciado, que en herramientas es justo lo que uno quiere.')
+    ) AS t(pos, calificacion, titulo, cuerpo)
+    WHERE t.pos = (c.id_cliente + p.id_producto) % 4
+) v ON true;
+
+-- Y aquí se derivan las dos columnas del producto (RN-093). Es la misma
+-- sentencia que ejecuta el servicio cada vez que alguien opina: la semilla no
+-- tiene una vía propia para escribir un promedio.
+UPDATE producto p
+SET calificacion_promedio = coalesce(x.promedio, 0),
+    calificacion_conteo   = coalesce(x.conteo, 0)
+FROM (
+    SELECT fk_id_producto,
+           round(avg(calificacion)::numeric, 1) AS promedio,
+           count(*)                             AS conteo
+    FROM opinion
+    WHERE eliminado_en IS NULL
+    GROUP BY fk_id_producto
+) x
+WHERE x.fk_id_producto = p.id_producto;
+
+-- =========================================================================
+-- 11. Conversaciones y notificaciones
 -- =========================================================================
 
 INSERT INTO conversacion (fk_id_cliente, fk_id_orden, asunto, ultimo_mensaje_en, no_leidos_admin, creado_en)

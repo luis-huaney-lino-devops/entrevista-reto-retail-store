@@ -80,6 +80,9 @@ export type ProductoDetalle = {
   destacado: boolean
   calificacionPromedio: number | null
   calificacionConteo: number | null
+  /** Las cinco barras, de 5 a 1. Vienen siempre, aunque el producto no tenga
+   *  ninguna opinion: una barra ausente se lee como un dato que falta. */
+  desgloseCalificacion: DesgloseCalificacion[]
   imagenes: ImagenProducto[]
   marca: Referencia | null
   subcategoria: Referencia | null
@@ -124,6 +127,48 @@ export type Pagina<T> = {
   totalItems: number
   totalPaginas: number
 }
+
+/* ---------------------------------------------------------------- opiniones */
+
+/** Una barra del desglose por estrellas de un producto. */
+export type DesgloseCalificacion = {
+  estrellas: number
+  cantidad: number
+  /** Lo calcula la API para que el servidor y la tienda no puedan discrepar. */
+  porcentaje: number
+}
+
+/**
+ * Una opinion publicada.
+ *
+ * `autor` llega ya abreviado por la API -«Maria Q.»- y no hay forma de pedir el
+ * nombre completo ni el correo: no viajan. La tienda lo pinta tal cual.
+ */
+export type Opinion = {
+  id: number
+  productoId: number
+  calificacion: number
+  titulo: string
+  cuerpo: string
+  compraVerificada: boolean
+  autor: string
+  creadoEn: string
+  actualizadoEn: string
+  /** `actualizadoEn` distinto de `creadoEn`. Lo decide la API, no la tienda. */
+  editada: boolean
+}
+
+/** Lo que se envia al escribir o editar. El autor sale del token y la insignia
+ *  la calcula el servidor: ninguno de los dos se manda desde aqui. */
+export type PeticionOpinion = {
+  calificacion: number
+  titulo: string
+  cuerpo: string
+}
+
+/** Topes que impone la API. Se repiten aqui para avisar antes de enviar. */
+export const TITULO_OPINION_MAXIMO = 120
+export const CUERPO_OPINION_MAXIMO = 2000
 
 /* ------------------------------------------------------------------ carrito */
 

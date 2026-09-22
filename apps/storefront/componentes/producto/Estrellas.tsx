@@ -5,22 +5,28 @@ import { clases } from '@/lib/formato'
 /**
  * Calificacion en estrellas.
  *
- * Se pintan en la interfaz porque el dato viene del sembrado, pero **no van al
- * JSON-LD**: declarar una valoracion agregada en datos estructurados sin
- * sistema de resenas seria afirmarle al buscador algo que no ocurrio, y las
- * penalizaciones por datos estructurados falsos son reales.
+ * El numero sale de las opiniones reales del producto (RN-093): es la media de
+ * las que estan vivas, y la API la recalcula en cada escritura. Por eso **si**
+ * va al JSON-LD como `aggregateRating`, pero solo cuando hay al menos una
+ * opinion -ver `lib/jsonld.tsx`-. Un producto sin ninguna vale 0, y cero no
+ * significa «malo» sino «todavia nadie»: ahi no se pinta nada.
  *
  * Las estrellas son decorativas (`aria-hidden`); lo que se anuncia es el texto.
+ *
+ * `mostrarCifra` existe para la tarjeta de una opinion suelta: «5.0» al lado de
+ * cinco estrellas llenas no anade nada, y en una lista de resenas se repite
+ * tantas veces como opiniones haya.
  */
 
 type Propiedades = {
   promedio: number | null
   conteo?: number | null
   tamano?: number
+  mostrarCifra?: boolean
   className?: string
 }
 
-export function Estrellas({ promedio, conteo, tamano = 13, className }: Propiedades) {
+export function Estrellas({ promedio, conteo, tamano = 13, mostrarCifra = true, className }: Propiedades) {
   if (promedio === null || promedio === undefined) return null
   const llenas = Math.round(promedio)
 
@@ -39,10 +45,12 @@ export function Estrellas({ promedio, conteo, tamano = 13, className }: Propieda
           />
         ))}
       </span>
-      <span aria-hidden className="cifra text-xs text-texto-suave">
-        {promedio.toFixed(1)}
-        {conteo ? ` (${conteo})` : ''}
-      </span>
+      {mostrarCifra && (
+        <span aria-hidden className="cifra text-xs text-texto-suave">
+          {promedio.toFixed(1)}
+          {conteo ? ` (${conteo})` : ''}
+        </span>
+      )}
     </span>
   )
 }

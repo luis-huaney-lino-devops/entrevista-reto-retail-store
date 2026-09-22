@@ -1,4 +1,5 @@
 import type { Config } from 'tailwindcss'
+import plugin from 'tailwindcss/plugin'
 
 /**
  * Tema de la tienda.
@@ -78,7 +79,20 @@ const config: Config = {
       },
     },
   },
-  plugins: [],
+  plugins: [
+    /*
+     * `raton:` = hay un puntero de verdad que puede pasar por encima.
+     *
+     * Es la misma media query que usa el panel (`estilos.css`) para revelar las
+     * acciones de una fila al pasar el raton. Lo que resuelve es un bug real:
+     * gatear un efecto de hover por ancho de pantalla (`sm:`) deja a una tablet
+     * de 900 px con unas acciones que solo aparecen con un hover que ahi no
+     * existe. El criterio correcto no es el ancho, es el dispositivo de entrada.
+     */
+    plugin(({ addVariant }) => {
+      addVariant('raton', '@media (hover: hover) and (pointer: fine)')
+    }),
+  ],
 }
 
 export default config

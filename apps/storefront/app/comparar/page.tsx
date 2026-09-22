@@ -2,7 +2,7 @@
 
 import Image from 'next/image'
 import Link from 'next/link'
-import { Scale, Trash2, X } from 'lucide-react'
+import { ArrowLeftRight, Trash2, X } from 'lucide-react'
 
 import { Contenedor, Migas } from '@/componentes/disposicion/Seccion'
 import { Boton, EnlaceBoton } from '@/componentes/ui/Boton'
@@ -69,9 +69,9 @@ export default function PaginaComparador() {
 
       {productos.length === 0 ? (
         <SinResultados
-          icono={<Scale size={38} strokeWidth={1.5} />}
+          icono={<ArrowLeftRight size={38} strokeWidth={1.5} />}
           titulo="No hay nada que comparar todavia"
-          descripcion={`Pulsa el icono de balanza en cualquier tarjeta de producto y anade hasta ${TOPE_COMPARADOR}.`}
+          descripcion={`Pulsa el icono de las dos flechas en cualquier tarjeta de producto y anade hasta ${TOPE_COMPARADOR}.`}
           accion={
             <EnlaceBoton href="/productos" variante="primario">
               Ver el catalogo

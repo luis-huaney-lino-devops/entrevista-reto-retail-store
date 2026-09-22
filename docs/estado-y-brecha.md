@@ -197,6 +197,7 @@ Cosas que funcionan y que conviene tener escritas.
 | D-11 | El chat no tiene histórico paginado | Un hilo se carga entero. Con conversaciones largas habrá que paginar hacia atrás |
 | D-12 | `contracts/openapi.yaml` no cubre todavía `/cuenta`, `/ubigeo` ni los favoritos | El contrato vive en el código y en Swagger (`/swagger`), que sí los sirve. Hay que regenerar el YAML — ver D-4 |
 | D-13 | La IP del limitador sale del **primer** valor de `X-Forwarded-For` | Si el proxy añade la IP real detrás de lo que mandó el cliente, el primer valor lo elige el cliente y el límite por IP se puede esquivar cambiando una cabecera. El límite por correo -que es el que protege la cuenta- no se esquiva así. Lo correcto es leer desde la derecha descartando los proxies conocidos; está igual en el panel y en la tienda |
+| D-15 | `humo-chat.py` da por hecho que el **primer** cliente de `GET /admin/clientes` tiene compras | La lista va por nombre ascendente, y desde que la tienda puede registrar clientes, cualquier cuenta nueva sin órdenes cuyo nombre ordene antes que «Ana Torres» tumba esas dos comprobaciones. Era seguro cuando los clientes solo venían de la semilla. El arreglo es elegir un cliente con `ordenes > 0` en vez de `items[0]`, y está en un archivo que esta tanda no podía tocar |
 | D-14 | `token_cliente` está en el esquema y sin mapear | Es la tabla de los tokens de un solo uso. No se mapea porque no hay endpoint que los consuma: llega con el bloque de verificación y recuperación |
 
 ### Defectos cerrados

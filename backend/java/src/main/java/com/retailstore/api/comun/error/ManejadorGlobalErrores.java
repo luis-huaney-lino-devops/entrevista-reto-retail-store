@@ -66,6 +66,7 @@ public class ManejadorGlobalErrores extends ResponseEntityExceptionHandler {
             Map.entry("uq_cupon_codigo", CodigoError.DUPLICATE_COUPON_CODE),
             Map.entry("uq_administrador_usuario", CodigoError.DUPLICATE_USERNAME),
             Map.entry("uq_item_carrito", CodigoError.CONCURRENT_MODIFICATION),
+            Map.entry("uq_opinion_cliente_producto", CodigoError.DUPLICATE_REVIEW),
             Map.entry("fk_producto_subcategoria", CodigoError.HAS_DEPENDENTS),
             Map.entry("fk_subcategoria_categoria", CodigoError.HAS_DEPENDENTS),
             Map.entry("fk_producto_marca", CodigoError.HAS_DEPENDENTS),

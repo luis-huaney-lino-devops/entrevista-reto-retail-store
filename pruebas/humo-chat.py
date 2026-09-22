@@ -118,11 +118,16 @@ s, sesion = pedir("POST", "/admin/acceso", {"usuario": "admin", "contrasena": "A
 revisar("acceso al panel", s == 200, s)
 token = sesion["tokenAcceso"]
 
-s, clientes = pedir("GET", "/admin/clientes", token=token)
+s, clientes = pedir("GET", "/admin/clientes?tamanoPagina=100", token=token)
+# Un cliente que haya comprado, no el primero de la lista. El panel ordena por
+# nombre, asi que en cuanto la tienda registra cuentas —o las registra otra
+# prueba— cualquier alta sin compras que caiga antes tumbaba esta comprobacion.
+# Lo que se quiere verificar es que el historial se enlaza, no quien va primero.
+conCompras = [c for c in clientes["items"] if c["ordenes"] > 0]
 revisar("hay clientes con su historial de compras",
-        s == 200 and clientes["totalItems"] >= 8 and clientes["items"][0]["ordenes"] > 0,
-        (s, clientes.get("totalItems")))
-idCliente = clientes["items"][0]["id"]
+        s == 200 and clientes["totalItems"] >= 8 and len(conCompras) > 0,
+        (s, clientes.get("totalItems"), [(c["nombre"], c["ordenes"]) for c in clientes["items"][:3]]))
+idCliente = conCompras[0]["id"]
 
 s, detalle = pedir("GET", "/admin/clientes/%d" % idCliente, token=token)
 revisar("el detalle del cliente trae sus órdenes",

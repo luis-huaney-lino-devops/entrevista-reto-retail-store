@@ -604,6 +604,117 @@ atendió alguien no tiene que volver a aparecerle a otro.
 
 ---
 
+## 10. Opiniones de producto
+
+### RN-090 — Una opinión por persona y producto *(decisión)*
+Un cliente deja **como mucho una** opinión sobre un producto. Volver a opinar
+no crea una segunda: se edita la que ya hay.
+
+Lo garantiza el índice único parcial `uq_opinion_cliente_producto`, no el
+servicio. Un «mira si ya opinó y, si no, inserta» lo atraviesan dos peticiones
+simultáneas —dos pestañas, un doble envío del formulario— y la segunda acaba
+reventando contra la base con un error que nadie escribió.
+
+Parcial porque solo cuenta lo vivo: quien elimina la suya (RN-094) vuelve a
+tener el sitio libre. Lo contrario sería condenar al silencio permanente a
+quien se arrepintió de lo que escribió.
+
+→ `409 DUPLICATE_REVIEW`, con el identificador de la opinión que ya existe para
+que el cliente pueda ir a editarla en vez de adivinar qué pasó.
+
+### RN-091 — Opina quien tiene cuenta, y solo de lo que puede ver *(decisión)*
+Para opinar hace falta una sesión de cliente. Una opinión anónima no se puede
+editar, ni retirar, ni contar una vez por persona: las tres cosas que la hacen
+creíble dependen de saber quién la escribió.
+
+**No hace falta haber comprado.** Quien compró lleva su insignia (RN-092), que
+es lo que el lector mira. Exigir la compra para escribir dejaría el catálogo
+sin una sola opinión, y la distinción que de verdad importa —quien lo tiene en
+las manos frente a quien opina de oídas— ya está resuelta con la insignia.
+
+El producto tiene que estar visible en la tienda: no se opina de lo que no se
+puede ver. Un producto despublicado después conserva las opiniones que recibió
+mientras estaba publicado; lo que no admite es una nueva.
+
+→ Sin sesión: `401 UNAUTHENTICATED`. Producto no visible: `404 PRODUCT_NOT_FOUND`.
+
+### RN-092 — Compra verificada *(decisión)*
+Una opinión es de **compra verificada** cuando su autor tiene una orden en
+estado `ENTREGADA` que contiene ese producto.
+
+Lo calcula el servidor al escribir —al crear y al editar— y lo guarda en la
+fila. No llega nunca del cliente: una insignia que se pide no es una insignia.
+
+`ENTREGADA` y no `PAGADA`: lo que afirma es «esto lo tuvo en las manos», y una
+orden pagada todavía puede estar en un almacén.
+
+Se guarda en lugar de recalcularse en cada lectura por dos razones. Leerla sería
+una subconsulta sobre las órdenes por cada opinión de cada listado; y es una
+afirmación sobre el momento en que se escribió el texto. Se vuelve a calcular al
+editar: quien opinó antes de recibir el pedido y vuelve a pasar por su texto
+después, se gana la insignia.
+
+### RN-093 — El promedio se deriva de las opiniones, no se escribe *(decisión)*
+`producto.calificacion_promedio` es la media aritmética de las calificaciones de
+las opiniones vivas de ese producto, redondeada a un decimal, y
+`calificacion_conteo` es cuántas son. Un producto sin opiniones es `0` y `0`, y
+la tienda no le dibuja estrellas: cero no significa «malo», significa «todavía
+nadie».
+
+Las dos columnas **se recalculan dentro de la misma transacción** que crea,
+edita o elimina una opinión, con una sola sentencia que las vuelve a derivar de
+la tabla. Ningún endpoint las escribe, tampoco en el panel: un promedio que se
+puede teclear no es un promedio.
+
+Están desnormalizadas en `producto` a propósito. La rejilla del catálogo pinta
+las estrellas en cada tarjeta y admite ordenar por calificación (RN-023):
+calcularlas al vuelo sería un `group by` sobre toda la tabla de opiniones en
+cada página del catálogo, y ordenar por un valor agregado deja fuera cualquier
+índice. Se escriben rara vez —solo cuando alguien opina— y se leen en cada
+visita, que es la definición de dato que conviene tener resuelto.
+
+El recálculo **no toca la versión ni la auditoría del producto**: una opinión no
+es una edición del producto. Contarla como tal le daría un conflicto de bloqueo
+optimista al administrador que lo tuviera abierto, y le diría que «alguien
+modificó este producto» cuando nadie lo hizo.
+
+El desglose por estrellas —cuántas de 5, cuántas de 4…— sale de la misma tabla y
+**no se guarda**: son cinco filas y se piden una sola vez, en la ficha.
+
+### RN-094 — Una opinión no se borra: se marca como eliminada *(decisión)*
+Aplica RN-086. Borrarla de verdad rompería la explicación del promedio —la media
+de hoy no cuadraría ni con las opiniones visibles ni con ninguna eliminada— y
+dejaría sin rastro una retirada por moderación, que es justo el caso en el que
+alguien va a preguntar qué pasó.
+
+**No aparece en la papelera del panel.** La papelera es de lo administrable
+(RN-086); una opinión es de quien la escribió, y «restaurarla» sería volver a
+publicar en nombre de otra persona un texto que esa persona retiró.
+
+→ `DELETE`: `204 No Content`. Sobre la opinión de otra persona:
+`404 REVIEW_NOT_FOUND`, nunca `403` —un `403` confirmaría que esa opinión
+existe, y con identificadores correlativos eso es un contador de opiniones
+ajenas.
+
+### RN-095 — Una opinión es una nota de 1 a 5, con título y cuerpo *(decisión)*
+La calificación es un **entero** de 1 a 5. Sin medias estrellas: el promedio del
+producto sí lleva decimal porque es un promedio, pero la valoración de una
+persona es una elección entre cinco opciones, y ofrecer diez no produce un dato
+mejor.
+
+El título (hasta 120 caracteres) y el cuerpo (hasta 2000) son obligatorios y no
+pueden ser espacios en blanco. Una nota sin texto no es una opinión, es un voto
+—y para contar votos ya está el desglose por estrellas.
+
+La comprobación vive en tres sitios y no es duplicación: el DTO da el `400` con
+el campo señalado, la entidad se protege de cualquier otro camino que llegue a
+ella, y el `CHECK` de la base es la última línea, la que sigue valiendo cuando
+alguien escriba en la tabla desde fuera de la aplicación.
+
+→ `400 VALIDATION_ERROR`, con `errors[].field` apuntando al campo exacto.
+
+---
+
 ## Índice de reglas
 
 | ID | Regla | Resultado | Origen |
@@ -676,6 +787,12 @@ atendió alguien no tiene que volver a aparecerle a otro.
 | RN-087 | Toda eliminación se confirma antes | — | decisión |
 | RN-088 | Adjunto de chat: imagen o PDF, revisado | `422` | decisión |
 | RN-089 | Una alerta se publica una vez y se cierra sola | — | decisión |
+| RN-090 | Una opinión por persona y producto | `409` | decisión |
+| RN-091 | Opina quien tiene cuenta, sobre lo visible | `401` / `404` | decisión |
+| RN-092 | Compra verificada: orden ENTREGADA con ese producto | — | decisión |
+| RN-093 | El promedio se deriva de las opiniones | — | decisión |
+| RN-094 | Una opinión se elimina, no se borra | `204` | decisión |
+| RN-095 | Nota de 1 a 5, con título y cuerpo | `400` | decisión |
 
 ---
 
