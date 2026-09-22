@@ -22,7 +22,22 @@ export default function robots(): MetadataRoute.Robots {
       {
         userAgent: '*',
         allow: '/',
-        disallow: ['/carrito', '/favoritos', '/comparar', '/mi-cuenta', '/acceso', '/registro'],
+        // `/pedido`, `/restablecer` y `/verificar` llevan datos de alguien o
+        // un token de un solo uso en la URL. Que un rastreador los siga seria
+        // publicar un pedido ajeno o quemar un enlace de recuperacion.
+        disallow: [
+          '/carrito',
+          '/favoritos',
+          '/comparar',
+          '/mi-cuenta',
+          '/acceso',
+          '/registro',
+          '/checkout',
+          '/pedido',
+          '/recuperar',
+          '/restablecer',
+          '/verificar',
+        ],
       },
     ],
     sitemap: `${base}/sitemap.xml`,

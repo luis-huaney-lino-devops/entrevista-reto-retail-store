@@ -1,8 +1,9 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { AlertTriangle, CheckCircle2, Loader2 } from 'lucide-react'
+import { CheckCircle2, Loader2 } from 'lucide-react'
 
+import { AvisoVerificacion } from '@/componentes/cuenta/AvisoVerificacion'
 import { ZonaPrivada } from '@/componentes/cuenta/ZonaPrivada'
 import { Boton } from '@/componentes/ui/Boton'
 import { CampoTexto } from '@/componentes/ui/Campo'
@@ -25,30 +26,15 @@ import { useSesion } from '@/funcionalidades/sesion/ProveedorSesion'
 export default function PaginaMiCuenta() {
   return (
     <ZonaPrivada titulo="Mis datos">
-      <div className="space-y-6">
+      {/* Acotado: un campo de contrasena de 900 px de ancho no se rellena
+          mejor, y el ojo pierde la relacion entre etiqueta y control. En movil
+          ocupa todo, que es lo que toca. */}
+      <div className="max-w-2xl space-y-6">
         <AvisoVerificacion />
         <FormularioPerfil />
         <FormularioContrasena />
       </div>
     </ZonaPrivada>
-  )
-}
-
-function AvisoVerificacion() {
-  const { cliente } = useSesion()
-  if (!cliente || cliente.emailVerificado) return null
-
-  return (
-    <div className="flex items-start gap-2.5 rounded-marca border border-aviso/30 bg-aviso-suave px-4 py-3">
-      <AlertTriangle size={17} className="mt-0.5 shrink-0 text-aviso" aria-hidden />
-      <div className="text-sm">
-        <p className="font-semibold text-aviso">Tu correo todavia no esta verificado</p>
-        <p className="mt-0.5 text-texto-medio">
-          Comprar no lo necesita, pero ver el historial de pedidos y cambiar la contrasena si. Busca el correo que te
-          enviamos al registrarte.
-        </p>
-      </div>
-    </div>
   )
 }
 
@@ -120,7 +106,7 @@ function FormularioPerfil() {
           />
         </div>
 
-        <div>
+        <div className="sm:max-w-md">
           <CampoTexto etiqueta="Correo electronico" value={cliente?.email ?? ''} disabled readOnly />
           <p className="mt-1 flex items-center gap-1.5 text-xs text-texto-suave">
             {cliente?.emailVerificado ? (
@@ -193,6 +179,7 @@ function FormularioContrasena() {
       </p>
 
       <form onSubmit={enviar} className="space-y-4" noValidate>
+        <div className="grid gap-4 sm:grid-cols-2">
         {tiene && (
           <CampoTexto
             etiqueta="Contrasena actual"
@@ -214,6 +201,7 @@ function FormularioContrasena() {
           ayuda="Al menos 10 caracteres."
           onChange={(e) => setNueva(e.target.value)}
         />
+        </div>
 
         {error && (
           <p role="alert" className="rounded-marca bg-peligro-suave px-3 py-2.5 text-sm font-medium text-peligro">

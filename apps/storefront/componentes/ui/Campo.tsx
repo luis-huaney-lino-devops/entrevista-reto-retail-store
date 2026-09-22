@@ -13,8 +13,12 @@ import { clases } from '@/lib/formato'
  * de pantalla no lee es un mensaje que la mitad de la gente no recibe.
  */
 
+// `min-w-0` no sobra: un <input> tiene un ancho minimo intrinseco -unos 20
+// caracteres- que `w-full` NO anula. Dentro de un grid o un flex, ese minimo
+// gana y el control desborda su columna en pantallas estrechas. Es la causa
+// habitual del scroll horizontal en moviles.
 const BASE_CONTROL =
-  'w-full rounded-marca border border-borde bg-white px-3 text-sm text-texto transition placeholder:text-texto-suave hover:border-borde-fuerte focus:border-tinta-claro disabled:cursor-not-allowed disabled:bg-superficie-alt disabled:text-texto-suave'
+  'w-full min-w-0 rounded-marca border border-borde bg-white px-3 text-sm text-texto transition placeholder:text-texto-suave hover:border-borde-fuerte focus:border-tinta-claro disabled:cursor-not-allowed disabled:bg-superficie-alt disabled:text-texto-suave'
 
 export type Comunes = {
   etiqueta: string

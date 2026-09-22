@@ -17,6 +17,7 @@ import com.retailstore.api.orden.dominio.ItemOrden;
 import com.retailstore.api.orden.dominio.Orden;
 import com.retailstore.api.orden.dto.CrearOrdenPeticion;
 import com.retailstore.api.orden.dto.OrdenDetalleRespuesta;
+import com.retailstore.api.orden.dto.OrdenResumenRespuesta;
 import com.retailstore.api.orden.repositorio.OrdenRepositorio;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -139,6 +140,22 @@ public class ServicioCheckout {
                 .map(OrdenDetalleRespuesta::de)
                 .orElseThrow(() -> new ExcepcionAplicacion(CodigoError.ORDER_NOT_FOUND,
                         "No existe la orden " + numero + "."));
+    }
+
+    /**
+     * Los pedidos del cliente que ha iniciado sesion, del mas reciente al mas
+     * antiguo.
+     *
+     * <p>Solo salen los que tienen {@code fk_id_cliente}: una compra de
+     * invitado con el mismo correo <strong>no</strong> aparece aqui. Podria
+     * parecer util incluirla, pero entonces bastaria registrarse con el correo
+     * de otra persona para ver lo que compro sin cuenta.
+     */
+    @Transactional(readOnly = true)
+    public java.util.List<OrdenResumenRespuesta> mios(Long idCliente) {
+        return ordenes.findByClienteIdOrderByCreadoEnDesc(idCliente).stream()
+                .map(OrdenResumenRespuesta::de)
+                .toList();
     }
 
     private Carrito carritoConfirmable(java.util.UUID id) {

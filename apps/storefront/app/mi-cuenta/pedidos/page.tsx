@@ -1,100 +1,81 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { Package } from 'lucide-react'
+import Link from 'next/link'
+import { Loader2, Package } from 'lucide-react'
 
+import { AvisoVerificacion } from '@/componentes/cuenta/AvisoVerificacion'
 import { ZonaPrivada } from '@/componentes/cuenta/ZonaPrivada'
 import { EnlaceBoton } from '@/componentes/ui/Boton'
 import { SinResultados } from '@/componentes/ui/Estados'
 import { peticion } from '@/lib/api.cliente'
 import { dinero, fecha } from '@/lib/formato'
-import { ErrorApi } from '@/lib/errores'
 import { useSesion } from '@/funcionalidades/sesion/ProveedorSesion'
 
 /**
  * Mis pedidos.
  *
- * El contrato de pedidos del cliente todavia no existe —ni en
- * `contracts/openapi.yaml` ni en la API viva— y **esta pagina no se lo
- * inventa**. Intenta leer `GET /cuenta/pedidos`; si no esta, lo dice con
- * claridad en vez de ensenar una tabla con datos falsos.
- *
- * Es deliberado: una pantalla de demostracion con pedidos ficticios parece
- * funcionar hasta que alguien pregunta de donde salen.
+ * Lee `GET /ordenes/mios`, que solo devuelve los que tienen cuenta asociada.
+ * Una compra hecha como invitado con el mismo correo **no** sale aqui: si
+ * saliera, bastaria registrarse con el correo de otra persona para ver lo que
+ * compro sin cuenta. Por eso la nota del final apunta a la confirmacion, que se
+ * consulta por numero.
  */
 
 type ResumenPedido = {
   numero: string
-  creadoEn: string | null
-  estado: string | null
+  creadoEn: string
+  estado: string
+  estadoEtiqueta: string
   total: number
-  totalUnidades: number | null
+  totalUnidades: number
 }
 
 export default function PaginaPedidos() {
   return (
     <ZonaPrivada titulo="Mis pedidos">
-      <Contenido />
+      <div className="max-w-2xl space-y-6">
+        <AvisoVerificacion />
+        <Contenido />
+      </div>
     </ZonaPrivada>
   )
 }
 
 function Contenido() {
-  const { estado: estadoSesion, cliente } = useSesion()
+  const { estado: estadoSesion } = useSesion()
   const [pedidos, setPedidos] = useState<ResumenPedido[] | null>(null)
-  const [noDisponible, setNoDisponible] = useState(false)
-  const [necesitaVerificar, setNecesitaVerificar] = useState(false)
+  const [error, setError] = useState(false)
 
   useEffect(() => {
     if (estadoSesion !== 'autenticado') return
     let vivo = true
-    void (async () => {
-      try {
-        const lista = await peticion<ResumenPedido[]>('/cuenta/pedidos')
-        if (vivo) setPedidos(lista)
-      } catch (e) {
-        if (!vivo) return
-        if (e instanceof ErrorApi && e.codigo === 'EMAIL_NOT_VERIFIED') {
-          setNecesitaVerificar(true)
-        } else {
-          setNoDisponible(true)
-        }
-        setPedidos([])
-      }
-    })()
+    peticion<ResumenPedido[]>('/ordenes/mios')
+      .then((datos) => {
+        if (vivo) setPedidos(datos)
+      })
+      .catch(() => {
+        if (vivo) setError(true)
+      })
     return () => {
       vivo = false
     }
   }, [estadoSesion])
 
-  // Ver el historial exige correo verificado. No es un error generico: se dice
-  // que falta y como resolverlo.
-  if (necesitaVerificar || (cliente && !cliente.emailVerificado)) {
+  if (error) {
     return (
-      <SinResultados
-        icono={<Package size={38} strokeWidth={1.5} />}
-        titulo="Verifica tu correo para ver tus pedidos"
-        descripcion="Comprar no lo necesita, pero el historial si. Busca el correo que te enviamos al registrarte; el enlace caduca, y si ya caduco puedes pedir otro desde el correo de bienvenida."
-      />
+      <p role="alert" className="rounded-marca bg-peligro-suave px-4 py-3 text-sm font-medium text-peligro">
+        No pudimos cargar tus pedidos. Recarga la pagina en un momento.
+      </p>
     )
   }
 
   if (pedidos === null) {
-    return <div className="h-48 animate-pulse rounded-marca bg-white" />
-  }
-
-  if (noDisponible) {
     return (
-      <SinResultados
-        icono={<Package size={38} strokeWidth={1.5} />}
-        titulo="El historial de pedidos todavia no esta disponible"
-        descripcion="El contrato de pedidos del cliente aun no esta publicado en la API. Cuando lo este, esta pagina lo mostrara sin mas cambios."
-        accion={
-          <EnlaceBoton href="/productos" variante="sutil">
-            Ver el catalogo
-          </EnlaceBoton>
-        }
-      />
+      <div className="flex justify-center py-12 text-texto-suave">
+        <Loader2 className="animate-spin" size={26} aria-hidden />
+        <span className="sr-only">Cargando tus pedidos...</span>
+      </div>
     )
   }
 
@@ -102,8 +83,8 @@ function Contenido() {
     return (
       <SinResultados
         icono={<Package size={38} strokeWidth={1.5} />}
-        titulo="Todavia no hiciste ningun pedido"
-        descripcion="Cuando compres, aqui veras el numero, la fecha y el estado de cada pedido."
+        titulo="Todavia no tienes pedidos"
+        descripcion="Cuando compres algo, aparecera aqui con su estado."
         accion={
           <EnlaceBoton href="/productos" variante="primario">
             Ver el catalogo
@@ -114,36 +95,39 @@ function Contenido() {
   }
 
   return (
-    <div className="overflow-x-auto rounded-marca border border-borde bg-white">
-      <table className="w-full min-w-[520px] border-collapse text-sm">
-        <caption className="sr-only">Historial de pedidos</caption>
-        <thead>
-          <tr className="border-b border-borde bg-superficie-alt">
-            <th scope="col" className="px-4 py-2.5 text-left text-[11px] font-semibold uppercase tracking-wide text-texto-suave">
-              Numero
-            </th>
-            <th scope="col" className="px-4 py-2.5 text-left text-[11px] font-semibold uppercase tracking-wide text-texto-suave">
-              Fecha
-            </th>
-            <th scope="col" className="px-4 py-2.5 text-left text-[11px] font-semibold uppercase tracking-wide text-texto-suave">
-              Estado
-            </th>
-            <th scope="col" className="px-4 py-2.5 text-right text-[11px] font-semibold uppercase tracking-wide text-texto-suave">
-              Total
-            </th>
-          </tr>
-        </thead>
-        <tbody>
-          {pedidos.map((p) => (
-            <tr key={p.numero} className="border-b border-borde last:border-0">
-              <td className="cifra px-4 py-3 font-semibold text-texto">{p.numero}</td>
-              <td className="px-4 py-3 text-texto-medio">{fecha(p.creadoEn)}</td>
-              <td className="px-4 py-3 text-texto-medio">{p.estado ?? '-'}</td>
-              <td className="cifra px-4 py-3 text-right font-semibold text-tinta">{dinero(p.total)}</td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
-    </div>
+    <>
+      <ul className="space-y-3">
+        {pedidos.map((pedido) => (
+          <li key={pedido.numero}>
+            {/* Tarjeta y no fila de tabla: en un movil una tabla de cinco
+                columnas obliga a desplazar en horizontal para leer el total,
+                que es justo el dato que se viene a mirar. */}
+            <Link
+              href={`/pedido/${pedido.numero}`}
+              className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2 rounded-marca border border-borde bg-white p-4 transition hover:border-borde-fuerte"
+            >
+              <div className="min-w-0">
+                <p className="font-mono text-sm font-bold tracking-tight text-tinta">{pedido.numero}</p>
+                <p className="mt-0.5 text-xs text-texto-suave">
+                  {fecha(pedido.creadoEn)} · {pedido.totalUnidades}{' '}
+                  {pedido.totalUnidades === 1 ? 'articulo' : 'articulos'}
+                </p>
+              </div>
+              <div className="flex items-center gap-3">
+                <span className="rounded-full bg-superficie-fondo px-2.5 py-1 text-xs font-semibold text-texto-medio">
+                  {pedido.estadoEtiqueta}
+                </span>
+                <span className="font-bold text-tinta">{dinero(pedido.total)}</span>
+              </div>
+            </Link>
+          </li>
+        ))}
+      </ul>
+
+      <p className="text-xs text-texto-suave">
+        Si compraste sin iniciar sesion, ese pedido no aparece aqui. Puedes consultarlo con el numero que
+        te dimos al confirmar.
+      </p>
+    </>
   )
 }

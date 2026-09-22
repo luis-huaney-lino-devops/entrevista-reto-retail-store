@@ -100,6 +100,10 @@ public class ConfiguracionSeguridad {
                         .requestMatchers(RAIZ_PANEL + "/**").authenticated()
                         .requestMatchers(RUTAS_CUENTA_PUBLICAS).permitAll()
                         .requestMatchers(RAIZ_CUENTA + "/**").authenticated()
+                        // El historial de compras es del cliente que lo pide. Sin
+                        // esta regla caeria en el permitAll de /api/** de abajo y
+                        // llegaria al controlador con el principal nulo.
+                        .requestMatchers("/api/v1/ordenes/mios").authenticated()
                         .requestMatchers("/swagger/**", "/swagger-ui/**", "/v3/api-docs/**", "/health").permitAll()
                         // El apretón de manos del WebSocket trae su propia
                         // credencial -un ticket o el token del hilo- y la

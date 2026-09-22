@@ -2,9 +2,11 @@ package com.retailstore.api.orden.web;
 
 import com.retailstore.api.orden.dto.CrearOrdenPeticion;
 import com.retailstore.api.orden.dto.OrdenDetalleRespuesta;
+import com.retailstore.api.orden.dto.OrdenResumenRespuesta;
 import com.retailstore.api.orden.servicio.ServicioCheckout;
 import com.retailstore.api.seguridad.dominio.ClienteAutenticado;
 import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
@@ -58,6 +60,17 @@ public class OrdenTiendaControlador {
     public OrdenDetalleRespuesta confirmar(@Valid @RequestBody CrearOrdenPeticion peticion,
                                            @AuthenticationPrincipal ClienteAutenticado cliente) {
         return checkout.crear(peticion, cliente == null ? null : cliente.id());
+    }
+
+    /** El historial del cliente. Exige sesión: son sus compras. */
+    @GetMapping("/mios")
+    @SecurityRequirement(name = "bearer-jwt")
+    @Operation(summary = "Mis pedidos, del más reciente al más antiguo",
+            description = "Solo los que tienen cuenta asociada. Una compra de invitado con el "
+                    + "mismo correo no aparece: si apareciera, bastaría registrarse con el correo "
+                    + "de otra persona para ver lo que compró sin cuenta.")
+    public java.util.List<OrdenResumenRespuesta> mios(@AuthenticationPrincipal ClienteAutenticado cliente) {
+        return checkout.mios(cliente.id());
     }
 
     /**

@@ -111,6 +111,12 @@ function FormularioAcceso() {
           </Boton>
         </form>
 
+        <p className="mt-3 text-center text-sm">
+          <Link href="/recuperar" className="text-texto-medio underline-offset-2 hover:underline">
+            Olvidaste tu contrasena?
+          </Link>
+        </p>
+
         <div className="mt-6">
           <BotonGoogle alFallar={setError} />
         </div>
