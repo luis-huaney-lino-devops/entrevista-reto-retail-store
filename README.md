@@ -271,7 +271,17 @@ Cada pieza en **su propia terminal**. La base de datos es la única obligatoria 
 | **Docker** | reciente | Solo para PostgreSQL |
 | **Python** | 3.10+ | Solo para las pruebas de extremo a extremo |
 
-Si tienes varias versiones de Java, fija la 21 en cada terminal:
+**Fija la 21 en cada terminal antes de tocar el backend.** No es opcional si
+tienes varias instaladas: Maven compila con una JVM y **arranca con la de
+`JAVA_HOME`**, asi que con `JAVA_HOME` en 17 sale
+
+```
+UnsupportedClassVersionError: ... class file version 65.0,
+this version of the Java Runtime only recognizes class file versions up to 61.0
+```
+
+que es «compilado con 21, intentando arrancar con 17». No es un error del
+codigo.
 
 ```bash
 export JAVA_HOME="/c/Program Files/Java/jdk-21"   # Git Bash / WSL / Linux / macOS
@@ -283,6 +293,15 @@ java -version    # tiene que decir 21
 $env:JAVA_HOME = 'C:\Program Files\Java\jdk-21'   # PowerShell
 $env:PATH = "$env:JAVA_HOME\bin;$env:PATH"
 ```
+
+Para no repetirlo nunca mas, una sola vez:
+
+```powershell
+[Environment]::SetEnvironmentVariable('JAVA_HOME','C:\Program Files\Java\jdk-21','User')
+```
+
+y abre una terminal nueva. Si ya te fallo una vez, anade `mvn clean`: en
+`target/` quedaron clases compiladas con otra version.
 
 ### 1 · Base de datos
 
