@@ -54,6 +54,15 @@ services:
 
       GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID:-}
 
+      # Correo saliente. Vacia la clave, la aplicacion arranca igual y registra
+      # cada correo en el log en vez de enviarlo: asi el proyecto se levanta sin
+      # credenciales. En produccion hay que ponerla o no sale ningun correo.
+      RESEND_API_KEY: ${RESEND_API_KEY:-}
+      CORREO_REMITENTE: ${CORREO_REMITENTE:-Retail Store <no-reply@tutec.pe>}
+      # Base de los enlaces que viajan en los correos. Se deriva del dominio de
+      # la tienda para que no se pueda quedar desfasada respecto a el.
+      URL_TIENDA: https://${DOMINIO_TIENDA}
+
       ALMACEN_TIPO: ${ALMACEN_TIPO:-local}
       ALMACEN_DIRECTORIO: /app/datos/archivos
       # De donde cuelgan las URL publicas de las imagenes. Por defecto la sirve

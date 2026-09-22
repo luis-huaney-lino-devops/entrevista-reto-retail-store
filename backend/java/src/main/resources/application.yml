@@ -80,7 +80,11 @@ app:
     remitente: ${CORREO_REMITENTE:Retail Store <no-reply@tutec.pe>}
     # Base de los enlaces del correo. Sin esto, el de recuperacion apuntaria a
     # localhost en produccion.
-    url-tienda: ${NEXT_PUBLIC_URL_TIENDA:http://localhost:3000}
+    #
+    # Variable propia y NO NEXT_PUBLIC_URL_TIENDA: aquella es un build arg de la
+    # tienda y nunca llega al contenedor de la API. Leerla aqui dejaba los
+    # enlaces en localhost sin que nada fallara a la vista.
+    url-tienda: ${URL_TIENDA:http://localhost:3000}
   google:
     # Vacio a proposito: el repositorio no lleva credenciales. Sin esta variable
     # POST /api/v1/cuenta/google responde 503 GOOGLE_NOT_CONFIGURED diciendo
