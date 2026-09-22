@@ -139,6 +139,21 @@ export function ProveedorCarrito({ children }: { children: ReactNode }) {
           return null
         }
         avisar(e instanceof ErrorApi ? e.mensajeUsuario : 'No pudimos actualizar el carrito.', 'error')
+
+        // El stock pudo cambiar por culpa de OTRA persona comprando a la vez.
+        // Revertir no basta: el carrito local se queda con el `stockDisponible`
+        // que trajo la ultima respuesta, que ya es viejo, y el siguiente intento
+        // falla igual sin que se entienda por que. Se vuelve a leer del servidor
+        // para que el tope del selector y el aviso reflejen lo que hay ahora.
+        const idActual = idCarrito.current
+        if (idActual && (codigo === 'INSUFFICIENT_STOCK' || codigo === 'PRODUCT_INACTIVE')) {
+          try {
+            despachar({ tipo: 'HIDRATADO', carrito: await api.obtenerCarrito(idActual) })
+          } catch {
+            // Si tampoco se puede releer, se queda lo revertido: es lo ultimo
+            // que se sabe con certeza.
+          }
+        }
         return null
       }
     },

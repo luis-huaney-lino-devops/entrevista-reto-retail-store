@@ -79,6 +79,14 @@ function Resumen({ provisional }: { provisional: boolean }) {
   const { carrito } = useCarrito()
   if (!carrito) return null
 
+  // Lineas que ya no caben en el stock. Pasa sin hacer nada raro: basta con que
+  // otra persona compre las mismas unidades mientras este carrito esta abierto.
+  //
+  // Se bloquea aqui para no mandar a nadie a rellenar el formulario de checkout
+  // y que el servidor lo rechace al final. Quien decide de verdad es el
+  // servidor, que revalida al confirmar (RN-051); esto solo evita el viaje.
+  const sinStock = carrito.items.filter((i) => i.cantidad > i.stockDisponible)
+
   return (
     <div className="space-y-4 rounded-marca border border-borde bg-white p-5">
       <h2 className="font-marca text-base font-semibold text-tinta">Resumen</h2>
@@ -114,15 +122,28 @@ function Resumen({ provisional }: { provisional: boolean }) {
       {/* Se deshabilita mientras hay una mutacion en vuelo: confirmar con el
           total todavia provisional llevaria al checkout con una cifra que el
           servidor esta a punto de corregir. */}
-      <EnlaceBoton
-        href="/checkout"
-        variante="primario"
-        tamano="lg"
-        className="w-full"
-        aria-disabled={provisional || undefined}
-      >
-        Continuar la compra
-      </EnlaceBoton>
+      {sinStock.length > 0 ? (
+        <>
+          <Boton variante="primario" tamano="lg" className="w-full" disabled>
+            Continuar la compra
+          </Boton>
+          <p role="alert" className="rounded-marca bg-peligro-suave px-3 py-2.5 text-xs font-medium text-peligro">
+            {sinStock.length === 1
+              ? `Ajusta la cantidad de "${sinStock[0]!.nombre}": ya no hay tantas unidades.`
+              : `Ajusta ${sinStock.length} lineas: ya no hay tantas unidades disponibles.`}
+          </p>
+        </>
+      ) : (
+        <EnlaceBoton
+          href="/checkout"
+          variante="primario"
+          tamano="lg"
+          className="w-full"
+          aria-disabled={provisional || undefined}
+        >
+          Continuar la compra
+        </EnlaceBoton>
+      )}
       <p className="text-center text-xs text-texto-suave">
         No se piden datos de pago: el pedido se confirma y se coordina despues.
       </p>

@@ -25,6 +25,14 @@ type Propiedades = {
   provisional?: boolean
 }
 
+/**
+ * A partir de cuantas unidades deja de avisarse.
+ *
+ * Avisar de que quedan 80 no informa: solo ensena a ignorar el mensaje, y
+ * entonces tampoco se lee cuando quedan dos.
+ */
+const UMBRAL_POCAS = 5
+
 export function LineaCarrito({ item, compacta = false, provisional = false }: Propiedades) {
   const { fijarCantidad, quitar } = useAccionesCarrito()
   const imagen = variante(item.imagen, 'miniatura')
@@ -68,11 +76,32 @@ export function LineaCarrito({ item, compacta = false, provisional = false }: Pr
 
         <p className="cifra text-xs text-texto-suave">{dinero(item.precioUnitario)} por unidad</p>
 
-        {item.cantidad > item.stockDisponible && (
-          <p className="text-xs font-medium text-aviso">
-            Solo quedan {item.stockDisponible} {item.stockDisponible === 1 ? 'unidad' : 'unidades'}.
+        {/* Tres estados, no uno. Antes solo se avisaba cuando la cantidad YA
+            superaba el stock, asi que quien iba a pedir la ultima unidad no se
+            enteraba hasta chocar con el tope del selector sin explicacion.
+
+            El numero sale de la ultima respuesta del servidor y puede quedarse
+            viejo si otra persona compra a la vez; por eso el servidor revalida
+            al confirmar (RN-051) y el proveedor vuelve a leer el carrito cuando
+            responde INSUFFICIENT_STOCK. Esto es una ayuda, no la garantia. */}
+        {item.stockDisponible === 0 ? (
+          <p className="text-xs font-medium text-peligro">
+            Se quedo sin stock. Quitalo para poder confirmar la compra.
           </p>
-        )}
+        ) : item.cantidad > item.stockDisponible ? (
+          <p className="text-xs font-medium text-peligro">
+            Solo quedan {item.stockDisponible}{' '}
+            {item.stockDisponible === 1 ? 'unidad' : 'unidades'}: baja la cantidad para continuar.
+          </p>
+        ) : item.cantidad === item.stockDisponible ? (
+          <p className="text-xs font-medium text-aviso">
+            Llevas la ultima {item.stockDisponible === 1 ? 'unidad' : `existencia (${item.stockDisponible})`}.
+          </p>
+        ) : item.stockDisponible <= UMBRAL_POCAS ? (
+          <p className="text-xs text-aviso">
+            Quedan {item.stockDisponible} {item.stockDisponible === 1 ? 'unidad' : 'unidades'}.
+          </p>
+        ) : null}
 
         <div className="mt-auto flex items-center justify-between gap-2 pt-1">
           <SelectorCantidad
