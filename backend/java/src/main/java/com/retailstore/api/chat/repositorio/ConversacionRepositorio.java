@@ -9,6 +9,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 
 public interface ConversacionRepositorio extends JpaRepository<Conversacion, Long> {
 
@@ -31,6 +32,17 @@ public interface ConversacionRepositorio extends JpaRepository<Conversacion, Lon
      * la que interesa al abrir la orden es la última.
      */
     Optional<Conversacion> findFirstByOrdenIdOrderByIdDesc(Long idOrden);
+
+    /** La bandeja del cliente en la tienda, ordenada por actividad. */
+    java.util.List<Conversacion> findByClienteIdOrderByUltimoMensajeEnDesc(Long idCliente);
+
+    /**
+     * Lo que pinta la campana de la tienda. Se suma en la base y no en memoria:
+     * traer todas las conversaciones para sumar un entero sería cargar los
+     * hilos enteros en cada visita.
+     */
+    @Query("select coalesce(sum(c.noLeidosCliente), 0) from Conversacion c where c.cliente.id = :idCliente")
+    long noLeidosDelCliente(@Param("idCliente") Long idCliente);
 
     @Query("select coalesce(sum(c.noLeidosAdmin), 0) from Conversacion c")
     long totalNoLeidos();

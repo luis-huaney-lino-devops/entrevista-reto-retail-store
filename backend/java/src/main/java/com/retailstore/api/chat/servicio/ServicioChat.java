@@ -7,6 +7,7 @@ import com.retailstore.api.chat.dominio.EstadoConversacion;
 import com.retailstore.api.chat.dominio.Mensaje;
 import com.retailstore.api.chat.dto.AbrirConversacionPeticion;
 import com.retailstore.api.chat.dto.ConversacionDetalleRespuesta;
+import com.retailstore.api.chat.dto.ConversacionMiaRespuesta;
 import com.retailstore.api.chat.dto.ConversacionResumenRespuesta;
 import com.retailstore.api.chat.dto.MensajeRespuesta;
 import com.retailstore.api.chat.repositorio.ConversacionRepositorio;
@@ -134,6 +135,92 @@ public class ServicioChat {
     @Transactional(readOnly = true)
     public ConversacionDetalleRespuesta porToken(String token) {
         return ConversacionDetalleRespuesta.de(buscarPorToken(token), false);
+    }
+
+    /**
+     * El hilo visto por el cliente <strong>que ha iniciado sesión</strong>, y
+     * marcado como leído al abrirlo.
+     *
+     * <p>Comprueba que la conversación sea suya. Sin esa comprobación, el token
+     * seguiría siendo la única defensa: bastaría uno filtrado para leer el hilo
+     * de otra persona desde una cuenta cualquiera.
+     */
+    public ConversacionDetalleRespuesta abrirComoCliente(String token, Long idCliente) {
+        Conversacion conversacion = buscarPorToken(token);
+        exigirPropietario(conversacion, idCliente);
+        conversacion.marcarLeidoPorCliente(reloj.instant());
+        conversaciones.flush();
+        return ConversacionDetalleRespuesta.de(conversacion, false);
+    }
+
+    /** Las conversaciones del cliente, de la más reciente a la más antigua. */
+    @Transactional(readOnly = true)
+    public List<ConversacionMiaRespuesta> mias(Long idCliente) {
+        return conversaciones.findByClienteIdOrderByUltimoMensajeEnDesc(idCliente).stream()
+                .map(ConversacionMiaRespuesta::de)
+                .toList();
+    }
+
+    /** Cuántas respuestas sin leer tiene el cliente. Es lo que pinta la campana. */
+    @Transactional(readOnly = true)
+    public long noLeidosDelCliente(Long idCliente) {
+        return conversaciones.noLeidosDelCliente(idCliente);
+    }
+
+    /**
+     * El cliente abre una consulta, opcionalmente sobre una orden suya.
+     *
+     * <p><strong>Si ya hay una conversación abierta sobre esa orden, se
+     * devuelve esa.</strong> Dos hilos sobre la misma compra terminan con el
+     * cliente contando su problema dos veces y con la administración
+     * respondiendo en el que nadie mira.
+     */
+    public ConversacionDetalleRespuesta abrirDesdeLaTienda(Long idCliente, Long idOrden,
+                                                           String asunto, String mensaje) {
+        Orden orden = null;
+        if (idOrden != null) {
+            orden = ordenes.findById(idOrden)
+                    .orElseThrow(() -> new ExcepcionAplicacion(CodigoError.ORDER_NOT_FOUND,
+                            "No existe la orden " + idOrden + "."));
+            // La orden tiene que ser suya. Si no, cualquiera podría abrir un
+            // hilo sobre la compra de otra persona y ver sus datos en el asunto.
+            if (orden.getCliente() == null || !orden.getCliente().getId().equals(idCliente)) {
+                throw new ExcepcionAplicacion(CodigoError.ORDER_NOT_FOUND,
+                        "No existe la orden " + idOrden + ".");
+            }
+            var existente = conversaciones.findFirstByOrdenIdOrderByIdDesc(idOrden);
+            if (existente.isPresent()) {
+                return abrirComoCliente(existente.get().getTokenAcceso().toString(), idCliente);
+            }
+        }
+
+        Cliente cliente = clientes.referencia(idCliente);
+        Conversacion conversacion = conversaciones.save(
+                new Conversacion(cliente, orden, asunto.trim()));
+
+        if (mensaje != null && !mensaje.isBlank()) {
+            registrar(conversacion, AutorMensaje.CLIENTE, cliente.getNombre(), mensaje.trim(), List.of());
+        }
+        conversaciones.flush();
+        return ConversacionDetalleRespuesta.de(conversacion, false);
+    }
+
+    /** Escribir desde la tienda con sesión: se comprueba que el hilo sea suyo. */
+    public MensajeRespuesta escribirComoClienteAutenticado(String token, Long idCliente,
+                                                           String cuerpo, List<Long> adjuntoIds) {
+        Conversacion conversacion = buscarPorToken(token);
+        exigirPropietario(conversacion, idCliente);
+        return registrar(conversacion, AutorMensaje.CLIENTE,
+                conversacion.getCliente().getNombre(), cuerpo, adjuntoIds);
+    }
+
+    private void exigirPropietario(Conversacion conversacion, Long idCliente) {
+        if (conversacion.getCliente() == null || !conversacion.getCliente().getId().equals(idCliente)) {
+            // Mismo código que si no existiera: quien prueba tokens no debe
+            // poder distinguir «no existe» de «existe y es de otro».
+            throw new ExcepcionAplicacion(CodigoError.CONVERSATION_NOT_FOUND,
+                    "No existe esa conversación.");
+        }
     }
 
     public MensajeRespuesta escribirComoCliente(String token, String cuerpo, List<Long> adjuntoIds) {

@@ -71,6 +71,14 @@ public class Conversacion extends EntidadAuditable {
     @Column(name = "no_leidos_admin", nullable = false)
     private int noLeidosAdmin;
 
+    /**
+     * Lo mismo, en la otra dirección: respuestas del administrador que el
+     * cliente todavía no ha visto. Sin esto el cliente solo se entera abriendo
+     * el hilo, que es pedirle que lo compruebe cada rato.
+     */
+    @Column(name = "no_leidos_cliente", nullable = false)
+    private int noLeidosCliente;
+
     @OneToMany(mappedBy = "conversacion", cascade = CascadeType.ALL, orphanRemoval = true)
     @OrderBy("enviadoEn asc")
     private List<Mensaje> mensajes = new ArrayList<>();
@@ -104,6 +112,8 @@ public class Conversacion extends EntidadAuditable {
         this.ultimoMensajeEn = momento;
         if (autor == AutorMensaje.CLIENTE) {
             this.noLeidosAdmin++;
+        } else {
+            this.noLeidosCliente++;
         }
         return mensaje;
     }
@@ -118,6 +128,26 @@ public class Conversacion extends EntidadAuditable {
             }
         }
         this.noLeidosAdmin = 0;
+        return marcados;
+    }
+
+    /**
+     * El cliente leyó el hilo: se marcan los mensajes del administrador y el
+     * contador vuelve a cero.
+     *
+     * <p>Simétrico a {@link #marcarLeidoPorAdmin}: cada lado marca lo que
+     * escribió <strong>el otro</strong>. Marcar los propios no significaría
+     * nada.
+     */
+    public int marcarLeidoPorCliente(Instant momento) {
+        int marcados = 0;
+        for (Mensaje mensaje : mensajes) {
+            if (mensaje.getAutor() != AutorMensaje.CLIENTE && mensaje.getLeidoEn() == null) {
+                mensaje.marcarLeido(momento);
+                marcados++;
+            }
+        }
+        this.noLeidosCliente = 0;
         return marcados;
     }
 
@@ -165,6 +195,10 @@ public class Conversacion extends EntidadAuditable {
 
     public int getNoLeidosAdmin() {
         return noLeidosAdmin;
+    }
+
+    public int getNoLeidosCliente() {
+        return noLeidosCliente;
     }
 
     public List<Mensaje> getMensajes() {
