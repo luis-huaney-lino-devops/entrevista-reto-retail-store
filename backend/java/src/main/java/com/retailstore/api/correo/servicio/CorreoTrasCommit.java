@@ -34,6 +34,10 @@ public class CorreoTrasCommit {
         alConfirmar(() -> correo.recuperacion(destinatario, nombre, token));
     }
 
+    public void verificacion(String destinatario, String nombre, String token) {
+        alConfirmar(() -> correo.verificacion(destinatario, nombre, token));
+    }
+
     public void intentoDeRegistroDuplicado(String destinatario, String nombre) {
         alConfirmar(() -> correo.intentoDeRegistroDuplicado(destinatario, nombre));
     }

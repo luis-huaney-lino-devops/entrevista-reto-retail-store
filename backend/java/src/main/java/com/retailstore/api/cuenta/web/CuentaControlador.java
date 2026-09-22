@@ -7,12 +7,16 @@ import com.retailstore.api.cuenta.dto.AccesoGooglePeticion;
 import com.retailstore.api.cuenta.dto.ActualizarPerfilPeticion;
 import com.retailstore.api.cuenta.dto.CambiarContrasenaClientePeticion;
 import com.retailstore.api.cuenta.dto.CuentaRespuesta;
+import com.retailstore.api.cuenta.dto.RecuperarPeticion;
 import com.retailstore.api.cuenta.dto.RegistroPeticion;
+import com.retailstore.api.cuenta.dto.RestablecerPeticion;
+import com.retailstore.api.cuenta.dto.VerificarPeticion;
 import com.retailstore.api.cuenta.dto.SesionClienteRespuesta;
 import com.retailstore.api.cuenta.servicio.ServicioAccesoGoogle;
 import com.retailstore.api.cuenta.servicio.ServicioAccesoTienda;
 import com.retailstore.api.cuenta.servicio.ServicioAccesoTienda.SesionEmitida;
 import com.retailstore.api.cuenta.servicio.ServicioCuenta;
+import com.retailstore.api.cuenta.servicio.ServicioRecuperacion;
 import com.retailstore.api.seguridad.dominio.ClienteAutenticado;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
@@ -21,10 +25,12 @@ import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import java.util.Map;
 import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseCookie;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.CookieValue;
+import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
@@ -56,14 +62,24 @@ public class CuentaControlador {
     private static final String MENSAJE_REGISTRO =
             "Si el correo es válido, te hemos enviado un enlace para confirmarlo.";
 
+    /**
+     * Mismo razonamiento que arriba, aplicado a la recuperación (RN-066): con
+     * dos mensajes distintos, probar direcciones diría cuáles tienen cuenta.
+     */
+    private static final String MENSAJE_RECUPERACION =
+            "Si el correo tiene una cuenta, te hemos enviado un enlace para cambiar la contraseña.";
+
     private final ServicioAccesoTienda accesos;
     private final ServicioAccesoGoogle google;
     private final ServicioCuenta cuentas;
+    private final ServicioRecuperacion recuperacion;
 
-    public CuentaControlador(ServicioAccesoTienda accesos, ServicioAccesoGoogle google, ServicioCuenta cuentas) {
+    public CuentaControlador(ServicioAccesoTienda accesos, ServicioAccesoGoogle google,
+                             ServicioCuenta cuentas, ServicioRecuperacion recuperacion) {
         this.accesos = accesos;
         this.google = google;
         this.cuentas = cuentas;
+        this.recuperacion = recuperacion;
     }
 
     // ---------------------------------------------------------------- sesión
@@ -77,6 +93,43 @@ public class CuentaControlador {
         // una cuenta nueva -y decir cuál de las dos fue es justo lo que RN-061
         // prohíbe-.
         return ResponseEntity.accepted().body(Map.of("mensaje", MENSAJE_REGISTRO));
+    }
+
+    @PostMapping("/recuperar")
+    @Operation(summary = "Pedir el enlace para restablecer la contraseña",
+            description = "Responde 202 con el mismo cuerpo exista o no el correo (RN-066). "
+                    + "Contestar «esa dirección no está registrada» convertiría el endpoint "
+                    + "en un comprobador de quién tiene cuenta en la tienda.")
+    public ResponseEntity<Map<String, String>> recuperar(@Valid @RequestBody RecuperarPeticion peticion,
+                                                         HttpServletRequest http) {
+        recuperacion.solicitar(peticion.email(), ipDe(http));
+        return ResponseEntity.accepted().body(Map.of("mensaje", MENSAJE_RECUPERACION));
+    }
+
+    @PostMapping("/restablecer")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    @Operation(summary = "Poner una contraseña nueva con el token del correo",
+            description = "El token dura 30 minutos y sirve una sola vez. Al terminar se "
+                    + "cierran todas las sesiones abiertas: quien restablece suele hacerlo "
+                    + "porque sospecha que hay otro dentro.")
+    public void restablecer(@Valid @RequestBody RestablecerPeticion peticion) {
+        recuperacion.restablecer(peticion.token(), peticion.contrasenaNueva());
+    }
+
+    @PostMapping("/verificacion/reenviar")
+    @ResponseStatus(HttpStatus.ACCEPTED)
+    @SecurityRequirement(name = "bearer-jwt")
+    @Operation(summary = "Reenviar el correo de verificación. Requiere sesión")
+    public void reenviarVerificacion(@AuthenticationPrincipal ClienteAutenticado cliente,
+                                     HttpServletRequest http) {
+        recuperacion.reenviarVerificacion(cliente.id(), ipDe(http));
+    }
+
+    @PostMapping("/verificacion")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    @Operation(summary = "Confirmar el correo con el token del enlace")
+    public void verificar(@Valid @RequestBody VerificarPeticion peticion) {
+        recuperacion.verificar(peticion.token());
     }
 
     @PostMapping("/acceso")

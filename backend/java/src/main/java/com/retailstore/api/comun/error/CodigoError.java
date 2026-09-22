@@ -83,6 +83,8 @@ public enum CodigoError {
     FILE_IN_USE(HttpStatus.UNPROCESSABLE_ENTITY, "El archivo está en uso"),
     LAST_ADMIN(HttpStatus.UNPROCESSABLE_ENTITY, "Es el último administrador activo"),
     EMAIL_NOT_VERIFIED_BY_PROVIDER(HttpStatus.UNPROCESSABLE_ENTITY, "El proveedor no verificó el correo"),
+    INVALID_TOKEN(HttpStatus.UNPROCESSABLE_ENTITY, "Enlace inválido o caducado"),
+    EMAIL_ALREADY_VERIFIED(HttpStatus.UNPROCESSABLE_ENTITY, "El correo ya está verificado"),
 
     // --- 429 -----------------------------------------------------------------
     TOO_MANY_REQUESTS(HttpStatus.TOO_MANY_REQUESTS, "Demasiados intentos"),

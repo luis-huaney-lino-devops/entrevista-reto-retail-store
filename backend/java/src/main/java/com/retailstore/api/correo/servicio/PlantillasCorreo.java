@@ -55,6 +55,23 @@ final class PlantillasCorreo {
                 "Elegir contraseña nueva");
     }
 
+    static String verificacion(String nombre, String enlace) {
+        return envoltura(
+                "Confirma tu correo",
+                """
+                <p style="margin:0 0 16px;font-size:16px;color:%s;">Hola %s,</p>
+                <p style="margin:0 0 16px;font-size:15px;color:%s;line-height:1.6;">
+                  Confirma que esta direccion es tuya. Comprar no lo necesita, pero ver tu
+                  historial de pedidos y cambiar la contrasena si.
+                </p>
+                <p style="margin:0 0 16px;font-size:14px;color:%s;line-height:1.6;">
+                  El enlace vale durante 24 horas.
+                </p>
+                """.formatted(TINTA, escapar(nombre), TEXTO, TEXTO),
+                enlace,
+                "Confirmar mi correo");
+    }
+
     static String registroDuplicado(String nombre, String urlTienda) {
         return envoltura(
                 "Alguien intentó registrarse con tu correo",

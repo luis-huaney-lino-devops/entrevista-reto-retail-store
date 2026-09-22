@@ -57,7 +57,19 @@ public class ConfiguracionSeguridad {
             RAIZ_CUENTA + "/acceso",
             RAIZ_CUENTA + "/google",
             RAIZ_CUENTA + "/refrescar",
-            RAIZ_CUENTA + "/salir"};
+            RAIZ_CUENTA + "/salir",
+            // Recuperar la contraseña tiene que ser publico: quien lo necesita
+            // es justamente quien no puede entrar. Exigir sesion aqui seria
+            // pedir la llave para poder pedir la llave.
+            RAIZ_CUENTA + "/recuperar",
+            RAIZ_CUENTA + "/restablecer",
+            // Confirmar el correo se hace pulsando un enlace, y quien lo pulsa
+            // puede abrirlo en otro navegador donde no tiene sesion.
+            //
+            // Sin comodin a proposito: asi /verificacion/reenviar NO entra aqui
+            // y cae en el `authenticated()` de abajo, que es lo que debe ser
+            // -lo pide quien ya entro y ve el aviso de "sin verificar"-.
+            RAIZ_CUENTA + "/verificacion"};
 
     private final FiltroJwtPanel filtroJwt;
     private final FiltroJwtTienda filtroJwtTienda;

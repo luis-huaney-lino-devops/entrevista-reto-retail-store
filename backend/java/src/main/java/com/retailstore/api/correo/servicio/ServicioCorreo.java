@@ -79,6 +79,21 @@ public class ServicioCorreo {
     }
 
     /**
+     * El enlace que confirma que la dirección existe y es suya (RN-063).
+     *
+     * <p>Dura 24 h y no media hora como el de recuperación: este no cambia
+     * ninguna credencial, y obligar a repetir el proceso por tardar una tarde
+     * en abrir el correo es fricción sin ganancia.
+     */
+    @Async
+    public void verificacion(String destinatario, String nombre, String token) {
+        String enlace = propiedades.urlTienda() + "/verificar?token=" + token;
+        enviar(destinatario,
+                "Confirma tu correo",
+                PlantillasCorreo.verificacion(nombre, enlace));
+    }
+
+    /**
      * Aviso al dueño legítimo de un correo sobre el que alguien intentó
      * registrarse (RN-061).
      *
