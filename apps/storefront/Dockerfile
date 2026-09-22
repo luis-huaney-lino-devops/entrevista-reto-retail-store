@@ -19,6 +19,14 @@ COPY . .
 ARG NEXT_PUBLIC_API_URL
 ARG NEXT_PUBLIC_URL_TIENDA
 ARG NEXT_PUBLIC_GOOGLE_CLIENT_ID=
+# De donde puede traer imagenes el optimizador de next/image. Con el almacen en
+# R2 las fotos NO salen del dominio de la API sino del bucket, y sin ese host
+# entre los `remotePatterns` next/image responde 400 a cada una.
+#
+# Tiene que estar declarado AQUI ademas de pasarse en el compose: Docker ignora
+# en silencio un --build-arg que el Dockerfile no declara, y la construccion
+# sigue sin el sin avisar de nada.
+ARG NEXT_PUBLIC_CDN_URL=
 ARG API_URL_INTERNO
 ENV NEXT_PUBLIC_API_URL=$NEXT_PUBLIC_API_URL \
     NEXT_PUBLIC_URL_TIENDA=$NEXT_PUBLIC_URL_TIENDA \
