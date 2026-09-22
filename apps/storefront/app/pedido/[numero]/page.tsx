@@ -3,6 +3,7 @@ import { notFound } from 'next/navigation'
 import Link from 'next/link'
 import { CheckCircle2, Package, Truck } from 'lucide-react'
 
+import { ContactarSobrePedido } from '@/componentes/cuenta/ContactarSobrePedido'
 import { Contenedor } from '@/componentes/disposicion/Seccion'
 import { EnlaceBoton } from '@/componentes/ui/Boton'
 import { pedidoPorNumero } from '@/lib/api.servidor'
@@ -126,6 +127,22 @@ export default async function PaginaPedido({ params }: Props) {
           {pedido.telefono && (
             <p className="mt-1 text-sm text-texto-suave">Telefono: {pedido.telefono}</p>
           )}
+        </section>
+
+        <section className="mb-8 rounded-xl border border-borde bg-white p-5">
+          <h2 className="mb-1 font-semibold text-tinta">Necesitas algo sobre este pedido?</h2>
+          <p className="mb-3 text-sm text-texto-medio">
+            Escribenos y te respondemos por aqui mismo. Veras la respuesta en{' '}
+            <strong className="text-tinta">Mis mensajes</strong>.
+          </p>
+          {/* Es cliente aunque la pagina sea de servidor: necesita la sesion,
+              que vive en el navegador. Si la compra fue de invitado no se pinta
+              nada: no hay a quien atar el hilo. */}
+          <ContactarSobrePedido
+            ordenId={pedido.id}
+            ordenNumero={pedido.numero}
+            clienteId={pedido.clienteId}
+          />
         </section>
 
         <div className="flex flex-wrap justify-center gap-3">

@@ -3,7 +3,7 @@
 import { useEffect, type ReactNode } from 'react'
 import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
-import { MapPin, Package, User } from 'lucide-react'
+import { MapPin, MessageSquare, Package, User } from 'lucide-react'
 
 import { Contenedor, Migas } from '@/componentes/disposicion/Seccion'
 import { clases } from '@/lib/formato'
@@ -26,6 +26,7 @@ const SECCIONES = [
   { href: '/mi-cuenta', nombre: 'Mis datos', icono: User },
   { href: '/mi-cuenta/direcciones', nombre: 'Mis direcciones', icono: MapPin },
   { href: '/mi-cuenta/pedidos', nombre: 'Mis pedidos', icono: Package },
+  { href: '/mi-cuenta/mensajes', nombre: 'Mis mensajes', icono: MessageSquare },
 ] as const
 
 export function ZonaPrivada({ titulo, children }: { titulo: string; children: ReactNode }) {
@@ -69,7 +70,10 @@ export function ZonaPrivada({ titulo, children }: { titulo: string; children: Re
         <nav aria-label="Secciones de mi cuenta">
           <ul className="flex gap-1 overflow-x-auto lg:flex-col lg:gap-0.5">
             {SECCIONES.map(({ href, nombre, icono: Icono }) => {
-              const activa = ruta === href
+              // `startsWith` y no igualdad: el hilo de chat vive en
+              // /mi-cuenta/mensajes?hilo=..., y con igualdad la seccion se
+              // apagaba justo cuando estabas dentro de ella.
+              const activa = ruta === href || (href !== '/mi-cuenta' && ruta.startsWith(href))
               return (
                 <li key={href}>
                   <Link

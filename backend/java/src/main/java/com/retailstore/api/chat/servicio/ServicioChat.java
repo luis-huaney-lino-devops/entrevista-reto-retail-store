@@ -150,7 +150,10 @@ public class ServicioChat {
         exigirPropietario(conversacion, idCliente);
         conversacion.marcarLeidoPorCliente(reloj.instant());
         conversaciones.flush();
-        return ConversacionDetalleRespuesta.de(conversacion, false);
+        // Con el token: es el de SU conversación, y la tienda lo necesita para
+        // abrir el WebSocket del hilo. Devolvérselo no le enseña nada que no
+        // tuviera ya.
+        return ConversacionDetalleRespuesta.de(conversacion, true);
     }
 
     /** Las conversaciones del cliente, de la más reciente a la más antigua. */
@@ -202,7 +205,9 @@ public class ServicioChat {
             registrar(conversacion, AutorMensaje.CLIENTE, cliente.getNombre(), mensaje.trim(), List.of());
         }
         conversaciones.flush();
-        return ConversacionDetalleRespuesta.de(conversacion, false);
+        // Con el token, porque la tienda acaba de crear el hilo y lo necesita
+        // para llevar a la persona a él.
+        return ConversacionDetalleRespuesta.de(conversacion, true);
     }
 
     /** Escribir desde la tienda con sesión: se comprueba que el hilo sea suyo. */

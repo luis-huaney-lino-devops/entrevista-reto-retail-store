@@ -346,3 +346,59 @@ export type CrearPedido = {
   telefono?: string
   direccion: string
 }
+
+/* ------------------------------------------------------------------- chat */
+
+export type AdjuntoMensaje = {
+  id: number
+  nombre: string
+  tipoMime: string
+  bytes: number
+  url: string
+  esImagen: boolean
+}
+
+export type MensajeChat = {
+  id: number
+  /** `CLIENTE` o `ADMINISTRADOR`. Decide de que lado se pinta la burbuja. */
+  autor: string
+  autorNombre: string
+  cuerpo: string | null
+  adjuntos: AdjuntoMensaje[]
+  enviadoEn: string
+  leidoEn: string | null
+}
+
+/** Una conversacion en la bandeja del cliente. */
+export type ConversacionMia = {
+  id: number
+  /** Con esto se abre el hilo y se conecta el WebSocket. */
+  token: string
+  asunto: string
+  estado: string
+  ordenId: number | null
+  ordenNumero: string | null
+  /** Respuestas del administrador que todavia no he visto. */
+  noLeidos: number
+  ultimoMensajeEn: string | null
+  creadoEn: string
+}
+
+/**
+ * El hilo completo. Viene envuelto: la API devuelve la conversacion, sus
+ * mensajes y el token por separado, en vez de aplanarlo.
+ */
+export type ConversacionDetalle = {
+  conversacion: {
+    id: number
+    asunto: string
+    estado: string
+    ordenId: number | null
+    ordenNumero: string | null
+    ultimoMensajeEn: string | null
+    creadoEn: string
+  }
+  mensajes: MensajeChat[]
+  /** Con el que se abre el WebSocket del hilo. */
+  tokenAcceso: string
+}
